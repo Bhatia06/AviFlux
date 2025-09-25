@@ -1,11 +1,29 @@
 import "./index.css";
 
-function App() {
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import HomePage from "./pages/HomePage";
+import PlanPage from "./pages/PlanPage";
+import PlanDetailPage from "./pages/PlanDetailPage";
+import { ThemeProvider } from "./components/ThemeProvider";
+// import LoginPage from "./pages/LoginPage";
+// import SignupPage from "./pages/SignupPage";
+// import ProfilePage from "./pages/ProfilePage";
+// import NotFoundPage from "./pages/NotFoundPage";
+
+export default function App() {
     return (
-        <>
-            <h1 className="text-3xl font-bold underline ">Hello world!</h1>
-        </>
+        <ThemeProvider defaultTheme="dark" storageKey="aviflux-theme">
+            <Router>
+                <Routes>
+                    <Route path="/" element={<HomePage />} />
+                    <Route path="/plan" element={<PlanPage />} />
+                    <Route path="/plan/:id" element={<PlanDetailPage />} />
+                    {/* <Route path="/login" element={<LoginPage />} />
+                    <Route path="/signup" element={<SignupPage />} />
+                    <Route path="/profile/:id" element={<ProfilePage />} />
+                    <Route path="*" element={<NotFoundPage />} /> */}
+                </Routes>
+            </Router>
+        </ThemeProvider>
     );
 }
-
-export default App;
