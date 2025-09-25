@@ -42,14 +42,20 @@ export default function HomePage() {
                         Your Flight Planning Assistant
                     </h1>
                     <p className="max-w-[700px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed dark:text-gray-400">
-                        Enter your ICAO codes to get started with your flight plan.
+                        Enter your ICAO codes to get started with your flight
+                        plan.
                     </p>
-                    <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-2">
+                    <form
+                        onSubmit={handleSubmit}
+                        className="w-full max-w-sm space-y-2"
+                    >
                         <input
                             type="text"
                             placeholder="Enter ICAO codes (e.g., KJFK, KORD, KSFO)"
                             value={icaoCodes}
-                            onChange={(e) => setIcaoCodes(e.target.value.toUpperCase())}
+                            onChange={(e) =>
+                                setIcaoCodes(e.target.value.toUpperCase())
+                            }
                             className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm transition-colors placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-800 dark:bg-gray-950 dark:placeholder:text-gray-400"
                         />
                         <button
