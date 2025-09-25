@@ -45,8 +45,8 @@ def echo(payload: EchoPayload):
 
 
 if __name__ == "__main__":
-    # Run with: python backend/app.py  (uses uvicorn if installed)
+    # Run with: python app.py (from backend directory)
     import uvicorn
 
-    uvicorn.run("backend.app:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
 
