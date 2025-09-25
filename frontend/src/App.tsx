@@ -1,10 +1,10 @@
 import "./index.css";
 
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import HomePage from "./pages/HomePage";
 import PlanPage from "./pages/PlanPage";
 import PlanDetailPage from "./pages/PlanDetailPage";
-import { ThemeProvider } from "./components/ThemeProvider";
 // import LoginPage from "./pages/LoginPage";
 // import SignupPage from "./pages/SignupPage";
 // import ProfilePage from "./pages/ProfilePage";
@@ -12,7 +12,7 @@ import { ThemeProvider } from "./components/ThemeProvider";
 
 export default function App() {
     return (
-        <ThemeProvider defaultTheme="dark" storageKey="aviflux-theme">
+        <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
             <Router>
                 <Routes>
                     <Route path="/" element={<HomePage />} />

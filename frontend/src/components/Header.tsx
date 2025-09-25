@@ -1,51 +1,47 @@
 import {
     NavigationMenu,
     NavigationMenuItem,
-    NavigationMenuLink,
     NavigationMenuList,
-} from "@radix-ui/react-navigation-menu";
-import { Github } from "lucide-react";
-import { ThemeToggle } from "./ThemeToggle";
+    NavigationMenuLink,
+} from "@/components/ui/navigation-menu";
+import { Button } from "./ui/button";
+import { ModeToggle } from "@/components/mode-toggle";
+import { GithubIcon } from "lucide-react";
 
-export function Header() {
+export default function Header() {
     return (
         <header className="border-b">
-            <div className="container mx-auto flex h-16 items-center px-4">
+            <div className="container mx-auto flex items-center justify-between p-4">
                 <NavigationMenu>
-                    <NavigationMenuList className="flex gap-6">
+                    <NavigationMenuList>
                         <NavigationMenuItem>
-                            <NavigationMenuLink className="text-sm font-medium transition-colors hover:text-primary">
+                            <NavigationMenuLink href="/about">
                                 About
                             </NavigationMenuLink>
                         </NavigationMenuItem>
                         <NavigationMenuItem>
-                            <NavigationMenuLink className="text-sm font-medium transition-colors hover:text-primary">
+                            <NavigationMenuLink href="/blog">
                                 Blog
                             </NavigationMenuLink>
                         </NavigationMenuItem>
                         <NavigationMenuItem>
-                            <NavigationMenuLink className="text-sm font-medium transition-colors hover:text-primary">
+                            <NavigationMenuLink href="/plan">
                                 Create Path
                             </NavigationMenuLink>
                         </NavigationMenuItem>
                     </NavigationMenuList>
                 </NavigationMenu>
 
-                <div className="ml-auto flex items-center space-x-4">
-                    <ThemeToggle />
-                    <button className="text-sm font-medium transition-colors hover:text-primary">
-                        Login
-                    </button>
-                    <a
-                        href="#"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="transition-colors hover:text-primary"
-                    >
-                        <Github className="h-5 w-5" />
-                    </a>
-                    {/* Logo placeholder */}
-                    <div className="h-8 w-8">{/* Add your logo here */}</div>
+                <div className="flex items-center gap-4">
+                    <Button variant="outline" size="sm" asChild>
+                        <a href="/login">Login</a>
+                    </Button>
+                    <Button size="sm" asChild>
+                        <a href="https://github.com/your-repo" target="_blank">
+                            <GithubIcon></GithubIcon>
+                        </a>
+                    </Button>
+                    <ModeToggle></ModeToggle>
                 </div>
             </div>
         </header>
