@@ -13,6 +13,16 @@ import "leaflet/dist/leaflet.css";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip as RechartTooltip,
+    ResponsiveContainer,
+    Legend,
+} from "recharts";
 
 // --- Types ---
 interface Aircraft {
@@ -63,6 +73,13 @@ interface FlightPlan {
     summary: Summary;
     risks: Hazard[];
     map_layers: MapLayers;
+    weather_data: {
+        time: string[];
+        temperature_c: number[];
+        humidity_percent: number[];
+        wind_speed_kt: number[];
+        pressure_hpa: number[];
+    };
 }
 
 // --- Sample Data ---
@@ -144,6 +161,13 @@ const flightPlan: FlightPlan = {
             },
         ],
     },
+    weather_data: {
+        time: ["12Z", "13Z", "14Z", "15Z", "16Z", "17Z"],
+        temperature_c: [15, 17, 18, 20, 19, 16],
+        humidity_percent: [65, 63, 60, 58, 62, 70],
+        wind_speed_kt: [10, 15, 18, 12, 20, 14],
+        pressure_hpa: [1012, 1010, 1008, 1009, 1011, 1013],
+    },
 };
 
 // --- Helper: Marker Icon by Status ---
@@ -161,171 +185,291 @@ const FlightPlanSummary: React.FC = () => {
     const { route, summary, map_layers } = flightPlan;
 
     return (
-        <div className="flex flex-col lg:flex-row gap-4 p-4">
-            {/* Left Panel: Cards */}
-            <div className="flex-1 flex flex-col gap-4">
-                {/* Flight Plan Card */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Flight Plan</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p>
-                            <strong>Plan ID:</strong> {flightPlan.plan_id}
-                        </p>
-                        <p>
-                            <strong>Generated At:</strong>{" "}
-                            {new Date(flightPlan.generated_at).toLocaleString()}
-                        </p>
-                        <p>
-                            <strong>Departure:</strong>{" "}
-                            {new Date(route.departure_time).toLocaleString()}
-                        </p>
-                        <p>
-                            <strong>Aircraft:</strong> {route.aircraft.type},
-                            Cruise {route.aircraft.cruise_alt_ft} ft, Fuel{" "}
-                            {route.aircraft.fuel_kg} kg
-                        </p>
-                        <p>
-                            <strong>Risk Index:</strong>
-                            <Badge
-                                variant={
-                                    summary.risk_index === "amber"
-                                        ? "secondary"
-                                        : summary.risk_index === "red"
-                                        ? "destructive"
-                                        : "default"
-                                }
-                            >
-                                {summary.risk_index.toUpperCase()}
-                            </Badge>
-                        </p>
-                        <p>
-                            <strong>Distance:</strong> {route.distance_nm} NM
-                        </p>
-                        <p>
-                            <strong>Estimated Time:</strong>{" "}
-                            {route.estimated_time_min} min
-                        </p>
-                    </CardContent>
-                </Card>
+        <div>
+            <div className="flex flex-col lg:flex-row gap-4 p-4">
+                {/* Left Panel: Cards */}
+                <div className="flex-1 flex flex-col gap-4">
+                    {/* Flight Plan Card */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Flight Plan</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p>
+                                <strong>Plan ID:</strong> {flightPlan.plan_id}
+                            </p>
+                            <p>
+                                <strong>Generated At:</strong>{" "}
+                                {new Date(
+                                    flightPlan.generated_at
+                                ).toLocaleString()}
+                            </p>
+                            <p>
+                                <strong>Departure:</strong>{" "}
+                                {new Date(
+                                    route.departure_time
+                                ).toLocaleString()}
+                            </p>
+                            <p>
+                                <strong>Aircraft:</strong> {route.aircraft.type}
+                                , Cruise {route.aircraft.cruise_alt_ft} ft, Fuel{" "}
+                                {route.aircraft.fuel_kg} kg
+                            </p>
+                            <p>
+                                <strong>Risk Index:</strong>
+                                <Badge
+                                    variant={
+                                        summary.risk_index === "amber"
+                                            ? "secondary"
+                                            : summary.risk_index === "red"
+                                            ? "destructive"
+                                            : "default"
+                                    }
+                                >
+                                    {summary.risk_index.toUpperCase()}
+                                </Badge>
+                            </p>
+                            <p>
+                                <strong>Distance:</strong> {route.distance_nm}{" "}
+                                NM
+                            </p>
+                            <p>
+                                <strong>Estimated Time:</strong>{" "}
+                                {route.estimated_time_min} min
+                            </p>
+                        </CardContent>
+                    </Card>
 
-                {/* Summary Notes Card */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Summary Notes</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <ScrollArea style={{ maxHeight: 150 }}>
-                            <ul className="list-disc pl-5">
-                                {summary.text.map((note, idx) => (
-                                    <li key={idx}>{note}</li>
-                                ))}
-                            </ul>
-                        </ScrollArea>
-                    </CardContent>
-                </Card>
+                    {/* Summary Notes Card */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Summary Notes</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <ScrollArea style={{ maxHeight: 150 }}>
+                                <ul className="list-disc pl-5">
+                                    {summary.text.map((note, idx) => (
+                                        <li key={idx}>{note}</li>
+                                    ))}
+                                </ul>
+                            </ScrollArea>
+                        </CardContent>
+                    </Card>
 
-                {/* Airports Card */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Airports</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex flex-wrap gap-2">
-                        {map_layers.airports.map((ap, idx) => (
-                            <Badge
-                                key={idx}
-                                variant={
-                                    ap.status === "VFR"
-                                        ? "default"
-                                        : "destructive"
-                                }
-                            >
-                                {ap.icao} - {ap.status}
-                            </Badge>
-                        ))}
-                    </CardContent>
-                </Card>
+                    {/* Airports Card */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Airports</CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex flex-wrap gap-2">
+                            {map_layers.airports.map((ap, idx) => (
+                                <Badge
+                                    key={idx}
+                                    variant={
+                                        ap.status === "VFR"
+                                            ? "default"
+                                            : "destructive"
+                                    }
+                                >
+                                    {ap.icao} - {ap.status}
+                                </Badge>
+                            ))}
+                        </CardContent>
+                    </Card>
 
-                {/* Hazards Card */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Hazards</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex flex-wrap gap-2">
-                        {map_layers.hazards.map((hazard, idx) => (
-                            <Badge
-                                key={idx}
-                                variant={
-                                    hazard.severity === "high"
-                                        ? "destructive"
-                                        : "default"
-                                }
-                            >
-                                {hazard.type.toUpperCase()} - {hazard.severity}
-                            </Badge>
-                        ))}
-                    </CardContent>
-                </Card>
-            </div>
+                    {/* Hazards Card */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Hazards</CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex flex-wrap gap-2">
+                            {map_layers.hazards.map((hazard, idx) => (
+                                <Badge
+                                    key={idx}
+                                    variant={
+                                        hazard.severity === "high"
+                                            ? "destructive"
+                                            : "default"
+                                    }
+                                >
+                                    {hazard.type.toUpperCase()} -{" "}
+                                    {hazard.severity}
+                                </Badge>
+                            ))}
+                        </CardContent>
+                    </Card>
+                </div>
 
-            {/* Right Panel: Map */}
-            <div className="flex-1 min-h-[500px]">
-                <MapContainer
-                    center={[39.8283, -98.5795]}
-                    zoom={4}
-                    style={{ height: "100%", width: "100%" }}
-                >
-                    <TileLayer
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        attribution="&copy; OpenStreetMap contributors"
-                    />
-
-                    {/* Route line */}
-                    <Polyline
-                        positions={map_layers.route.coordinates.map((c) => [
-                            c[1],
-                            c[0],
-                        ])}
-                        color="blue"
+                {/* Right Panel: Map */}
+                <div className="flex-1 min-h-[500px]">
+                    <MapContainer
+                        center={[39.8283, -98.5795]}
+                        zoom={4}
+                        style={{ height: "100%", width: "100%" }}
                     >
-                        <Tooltip>
-                            Distance: {route.distance_nm} NM
-                            <br />
-                            Estimated Time: {route.estimated_time_min} min
-                        </Tooltip>
-                    </Polyline>
+                        <TileLayer
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                            attribution="&copy; OpenStreetMap contributors"
+                        />
 
-                    {/* Airports */}
-                    {map_layers.airports.map((ap, idx) => (
-                        <Marker
-                            key={idx}
-                            position={[ap.coord[1], ap.coord[0]]}
-                            icon={getAirportIcon(ap.status)}
+                        {/* Route line */}
+                        <Polyline
+                            positions={map_layers.route.coordinates.map((c) => [
+                                c[1],
+                                c[0],
+                            ])}
+                            color="blue"
                         >
-                            <Popup>
-                                {ap.icao} - {ap.status}
-                            </Popup>
-                        </Marker>
-                    ))}
+                            <Tooltip>
+                                Distance: {route.distance_nm} NM
+                                <br />
+                                Estimated Time: {route.estimated_time_min} min
+                            </Tooltip>
+                        </Polyline>
 
-                    {/* Hazards */}
-                    {map_layers.hazards.map((hazard, idx) => (
-                        <Polygon
-                            key={idx}
-                            positions={hazard.geojson.coordinates[0].map(
-                                (coord) => [coord[1], coord[0]]
-                            )}
-                            color={
-                                hazard.severity === "high" ? "red" : "orange"
-                            }
-                        >
-                            <Popup>
-                                {hazard.type.toUpperCase()} - {hazard.severity}
-                            </Popup>
-                        </Polygon>
-                    ))}
-                </MapContainer>
+                        {/* Airports */}
+                        {map_layers.airports.map((ap, idx) => (
+                            <Marker
+                                key={idx}
+                                position={[ap.coord[1], ap.coord[0]]}
+                                icon={getAirportIcon(ap.status)}
+                            >
+                                <Popup>
+                                    {ap.icao} - {ap.status}
+                                </Popup>
+                            </Marker>
+                        ))}
+
+                        {/* Hazards */}
+                        {map_layers.hazards.map((hazard, idx) => (
+                            <Polygon
+                                key={idx}
+                                positions={hazard.geojson.coordinates[0].map(
+                                    (coord) => [coord[1], coord[0]]
+                                )}
+                                color={
+                                    hazard.severity === "high"
+                                        ? "red"
+                                        : "orange"
+                                }
+                            >
+                                <Popup>
+                                    {hazard.type.toUpperCase()} -{" "}
+                                    {hazard.severity}
+                                </Popup>
+                            </Polygon>
+                        ))}
+                    </MapContainer>
+                </div>
+            </div>
+            <div className="p-4">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Weather Analysis</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Temperature */}
+                            <ResponsiveContainer width="100%" height={200}>
+                                <LineChart
+                                    data={flightPlan.weather_data.time.map(
+                                        (t, i) => ({
+                                            time: t,
+                                            temperature:
+                                                flightPlan.weather_data
+                                                    .temperature_c[i],
+                                        })
+                                    )}
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="time" />
+                                    <YAxis unit="°C" />
+                                    <RechartTooltip />
+                                    <Legend />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="temperature"
+                                        stroke="#ff7300"
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+
+                            {/* Humidity */}
+                            <ResponsiveContainer width="100%" height={200}>
+                                <LineChart
+                                    data={flightPlan.weather_data.time.map(
+                                        (t, i) => ({
+                                            time: t,
+                                            humidity:
+                                                flightPlan.weather_data
+                                                    .humidity_percent[i],
+                                        })
+                                    )}
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="time" />
+                                    <YAxis unit="%" />
+                                    <RechartTooltip />
+                                    <Legend />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="humidity"
+                                        stroke="#007bff"
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+
+                            {/* Wind Speed */}
+                            <ResponsiveContainer width="100%" height={200}>
+                                <LineChart
+                                    data={flightPlan.weather_data.time.map(
+                                        (t, i) => ({
+                                            time: t,
+                                            wind: flightPlan.weather_data
+                                                .wind_speed_kt[i],
+                                        })
+                                    )}
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="time" />
+                                    <YAxis unit=" kt" />
+                                    <RechartTooltip />
+                                    <Legend />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="wind"
+                                        stroke="#28a745"
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+
+                            {/* Pressure */}
+                            <ResponsiveContainer width="100%" height={200}>
+                                <LineChart
+                                    data={flightPlan.weather_data.time.map(
+                                        (t, i) => ({
+                                            time: t,
+                                            pressure:
+                                                flightPlan.weather_data
+                                                    .pressure_hpa[i],
+                                        })
+                                    )}
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="time" />
+                                    <YAxis unit=" hPa" />
+                                    <RechartTooltip />
+                                    <Legend />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="pressure"
+                                        stroke="#6f42c1"
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
         </div>
     );

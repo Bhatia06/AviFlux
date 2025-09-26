@@ -1,19 +1,27 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import FlightPlanSummary from "./Test";
+// import FlightPlanSummary from "./Test";
+import FlightPlanSummary from "@/components/FlightPlanSummary";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
+type Plan = {
+    plan_id: string;
+    route: string[];
+    summary: string[];
+    risk_index: string;
+} | null;
+
 export default function PlanDetailPage() {
     const { id } = useParams();
-    const [plan, setPlan] = useState({});
+    const [plan, setPlan] = useState<Plan>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         async function fetchPlan() {
             try {
                 const response = await fakePlanFetch(id!);
-                setPlan(response);
+                setPlan(response as Plan);
             } catch (err) {
                 console.error(err);
             } finally {
