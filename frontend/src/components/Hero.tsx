@@ -35,29 +35,40 @@ export default function Hero() {
     };
 
     return (
-        <main className="flex-1 flex flex-col items-center justify-center text-center px-4">
-            <h1 className="text-4xl font-bold text-blue-600 mb-6">
+        <main className="flex-1 flex flex-col items-center justify-center text-center px-4 mb-25">
+            <h1 className="text-7xl font-bold text-blue-600 mb-3">
                 Flight Path Planner
             </h1>
             <p className="mb-8 text-muted-foreground">
                 Enter your route using ICAO airport codes (comma separated).
             </p>
 
-            <form
-                onSubmit={handleSubmit}
-                className="flex gap-2 w-full max-w-lg"
-            >
-                <Input
-                    type="text"
-                    placeholder="KJFK, KORD, KSFO"
-                    value={icaoCodes}
-                    onChange={(e) => setIcaoCodes(e.target.value.toUpperCase())}
-                    className="flex-1"
-                />
-                <Button type="submit" disabled={loading}>
-                    {loading ? "Loading..." : "Search"}
-                </Button>
-            </form>
+            <div className="relative w-full flex justify-center">
+                {/* Highlight Background */}
+                <div className="absolute inset-0 flex justify-center">
+                    <div className="w-full max-w-lg h-32 bg-gradient-to-r from-blue-500/20 via-blue-600/20 to-blue-500/20 rounded-2xl blur-2xl" />
+                </div>
+
+                {/* Foreground Form */}
+                <form
+                    onSubmit={handleSubmit}
+                    className="relative flex gap-2 w-full max-w-lg p-4 bg-background border rounded-2xl shadow-md"
+                >
+                    <Input
+                        type="text"
+                        placeholder="KJFK, KORD, KSFO"
+                        value={icaoCodes}
+                        onChange={(e) =>
+                            setIcaoCodes(e.target.value.toUpperCase())
+                        }
+                        autoFocus
+                        className="flex-1"
+                    />
+                    <Button type="submit" disabled={loading}>
+                        {loading ? "Loading..." : "Search"}
+                    </Button>
+                </form>
+            </div>
         </main>
     );
 }

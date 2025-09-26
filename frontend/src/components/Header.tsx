@@ -12,31 +12,34 @@ import Logo from ".././assets/Logo.png";
 export default function Header() {
     return (
         <header className="border-b">
-            <div className="container mx-auto flex items-center justify-between p-4">
+            <div className="container mx-auto flex items-center justify-between p-2">
                 <NavigationMenu>
                     <NavigationMenuList>
                         <NavigationMenuItem>
                             <NavigationMenuLink href="/">
-                                <img
-                                    src={Logo}
-                                    alt="Logo Here"
-                                    className="h-10"
-                                />
+                                <span className="font-bold text-xl flex items-center gap-2">
+                                    <img
+                                        src={Logo}
+                                        alt="Logo Here"
+                                        className="h-10"
+                                    />
+                                    AviFlux
+                                </span>
                             </NavigationMenuLink>
                         </NavigationMenuItem>
                         <NavigationMenuItem>
                             <NavigationMenuLink href="/about">
-                                About
+                                <span className="font-semibold">About</span>
                             </NavigationMenuLink>
                         </NavigationMenuItem>
                         <NavigationMenuItem>
-                            <NavigationMenuLink href="/blog">
-                                Blog
+                            <NavigationMenuLink href="#features">
+                                <span className="font-semibold">Features</span>
                             </NavigationMenuLink>
                         </NavigationMenuItem>
                         <NavigationMenuItem>
                             <NavigationMenuLink href="/plan">
-                                Create Path
+                                <span className="font-semibold">Plan</span>
                             </NavigationMenuLink>
                         </NavigationMenuItem>
                     </NavigationMenuList>
