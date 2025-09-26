@@ -15,6 +15,11 @@ numpy>=1.24.0
 supabase>=2.0.0
 python-dotenv>=1.0.0
 
+# Authentication and JWT
+PyJWT>=2.8.0
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+
 # HTTP client for aviation weather API
 aiohttp>=3.9.0
 

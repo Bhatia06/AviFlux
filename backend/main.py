@@ -21,8 +21,10 @@ from models.dtos import (
     MultiLegRouteRequest, MultiLegRouteSummaryResponse, RouteSegmentSummary,
     CreateFlightPlanRequest, FlightPlanSearchRequest, MultiICAOFlightPlanRequest
 )
+from models.auth_models import AuthError, AuthenticationError
 from services import FlightPlanService, RouteService
 from services.flight_plans_service import FlightPlansService, FlightPlanResponse as DBFlightPlanResponse
+from routes.auth_routes import router as auth_router
 from get_path import get_path_for_react
 
 # Load environment variables
@@ -52,6 +54,28 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include authentication routes
+app.include_router(auth_router)
+
+# Add global exception handlers for authentication
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(AuthenticationError)
+async def authentication_error_handler(request: Request, exc: AuthenticationError):
+    """Handle authentication errors globally."""
+    logger.error(f"Authentication error: {exc.message}")
+    
+    return JSONResponse(
+        status_code=401,
+        content=AuthError(
+            success=False,
+            error=exc.message,
+            error_code=exc.error_code,
+            details=exc.details
+        ).dict()
+    )
 
 
 class AirportDatabase:
