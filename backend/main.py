@@ -672,6 +672,121 @@ def get_flight_path(origin_icao: str, destination_icao: str):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+@app.get("/api/path", tags=["flight-path"])
+def get_flight_path_query_params(departure: str, arrival: str):
+    """
+    Get flight path data using query parameters (matches documentation)
+    
+    Args:
+        departure: Origin airport ICAO code (4 letters)
+        arrival: Destination airport ICAO code (4 letters)
+        
+    Returns:
+        Flight path data formatted for frontend
+        
+    Raises:
+        HTTPException: If airports are not found or calculation fails
+    """
+    # Validate ICAO codes
+    if len(departure) != 4 or len(arrival) != 4:
+        raise HTTPException(status_code=400, detail="ICAO codes must be 4 characters long")
+    
+    try:
+        logger.info(f"Calculating path with query params: {departure} -> {arrival}")
+        
+        # Use get_path functionality
+        result = get_path_for_react(departure, arrival)
+        
+        if result['success']:
+            logger.info(f"Path calculated successfully: {departure} -> {arrival}")
+            return result
+        else:
+            logger.error(f"Path calculation failed: {result.get('error', 'Unknown error')}")
+            raise HTTPException(status_code=404, detail=result.get('error', 'Path calculation failed'))
+            
+    except Exception as e:
+        logger.error(f"Error calculating flight path: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.post("/api/route/multi-leg", 
+          response_model=MultiLegRouteSummaryResponse,
+          tags=["flight-path"])
+def get_multi_leg_route(request: MultiLegRouteRequest):
+    """
+    Calculate multi-leg route as documented in API specification
+    
+    Args:
+        request: MultiLegRouteRequest with icao_codes list and options
+        
+    Returns:
+        MultiLegRouteSummaryResponse with route segments and totals
+        
+    Raises:
+        HTTPException: If calculation fails
+    """
+    try:
+        logger.info(f"Calculating multi-leg route: {request.icao_codes}")
+        
+        # Validate airports list
+        if len(request.icao_codes) < 2:
+            raise HTTPException(status_code=400, detail="At least 2 airports required")
+        
+        if len(request.icao_codes) > 10:
+            raise HTTPException(status_code=400, detail="Maximum 10 airports allowed")
+        
+        # Validate ICAO codes
+        for icao in request.icao_codes:
+            if len(icao) != 4:
+                raise HTTPException(status_code=400, detail=f"Invalid ICAO code: {icao}")
+        
+        # Use the route service to calculate multi-leg route
+        icao_codes = request.icao_codes.copy()
+        if request.circular and icao_codes[0] != icao_codes[-1]:
+            icao_codes.append(icao_codes[0])  # Add return to origin
+            
+        data = route_service.calculate_multi_leg_route(icao_codes, circular=request.circular)
+        
+        if data:
+            logger.info(f"Multi-leg route calculated successfully for {len(request.icao_codes)} airports")
+            return MultiLegRouteSummaryResponse(**data)
+        else:
+            logger.error("Multi-leg route calculation returned no data")
+            raise HTTPException(status_code=500, detail="Route calculation failed")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error calculating multi-leg route: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# Additional endpoint to match documentation format exactly
+@app.post("/api/route/multi-leg-simple", 
+          tags=["flight-path"])
+def get_multi_leg_route_simple(airports: List[str], include_return: bool = False):
+    """
+    Calculate multi-leg route with simple airport list format
+    Matches the documentation format exactly
+    
+    Args:
+        airports: List of airport ICAO codes
+        include_return: Whether to include return to origin
+        
+    Returns:
+        MultiLegRouteSummaryResponse with route segments and totals
+    """
+    # Convert to the expected request format
+    request = MultiLegRouteRequest(
+        icao_codes=airports,
+        circular=include_return,
+        request_date=None
+    )
+    
+    # Use the main multi-leg route function
+    return get_multi_leg_route(request)
+
+
 # Flight Plans Database Endpoints
 @app.post("/api/flight-plans", response_model=Dict, tags=["flight-plans"])
 async def create_flight_plan_db(
