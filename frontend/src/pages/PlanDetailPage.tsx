@@ -1,5 +1,8 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
+import FlightPlanSummary from "./Test";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
 export default function PlanDetailPage() {
     const { id } = useParams();
@@ -9,7 +12,6 @@ export default function PlanDetailPage() {
     useEffect(() => {
         async function fetchPlan() {
             try {
-                // Replace with real backend API call
                 const response = await fakePlanFetch(id!);
                 setPlan(response);
             } catch (err) {
@@ -25,9 +27,10 @@ export default function PlanDetailPage() {
     if (!plan) return <p>Plan not found.</p>;
 
     return (
-        <div>
-            <h1>Flight Plan {id}</h1>
-            <pre>{JSON.stringify(plan, null, 2)}</pre>
+        <div className="min-h-screen flex flex-col bg-background text-foreground">
+            <Header></Header>
+            <FlightPlanSummary></FlightPlanSummary>
+            <Footer></Footer>
         </div>
     );
 }

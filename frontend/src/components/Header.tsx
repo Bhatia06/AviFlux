@@ -7,6 +7,7 @@ import {
 import { Button } from "./ui/button";
 import { ModeToggle } from "@/components/mode-toggle";
 import { GithubIcon } from "lucide-react";
+import Logo from ".././assets/Logo.png";
 
 export default function Header() {
     return (
@@ -14,6 +15,15 @@ export default function Header() {
             <div className="container mx-auto flex items-center justify-between p-4">
                 <NavigationMenu>
                     <NavigationMenuList>
+                        <NavigationMenuItem>
+                            <NavigationMenuLink href="/">
+                                <img
+                                    src={Logo}
+                                    alt="Logo Here"
+                                    className="h-10"
+                                />
+                            </NavigationMenuLink>
+                        </NavigationMenuItem>
                         <NavigationMenuItem>
                             <NavigationMenuLink href="/about">
                                 About
