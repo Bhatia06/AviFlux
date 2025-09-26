@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase";
-import { authService } from "@/lib/auth";
+import { supabase } from "../lib/supabase.ts";
+import { authService } from "../lib/auth.ts";
 import { toast } from "sonner";
 
 interface AuthContextProps {
