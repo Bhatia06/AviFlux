@@ -186,7 +186,7 @@ class FlightPlanService:
                     description=f"{weather.flight_category} conditions at {icao}",
                     geojson={
                         "type": "Point",
-                        "coordinates": [[]]  # Would use actual airport coordinates
+                        "coordinates": [0.0, 0.0]  # Would use actual airport coordinates
                     }
                 )
                 risks.append(risk)

@@ -48,14 +48,86 @@ class FlightPlanResponse(BaseModel):
 # Multi-leg route DTOs
 class MultiLegRouteRequest(BaseModel):
     """Request for multi-leg route summary and optional circular path"""
-    airports: List[str] = Field(..., min_items=2, description="Ordered ICAO list: source -> intermediates -> destination")
+    icao_codes: List[str] = Field(..., min_length=2, description="Ordered ICAO list: source -> intermediates -> destination")
+    request_date: Optional[datetime] = Field(None, description="Request timestamp (optional)")
     circular: bool = Field(False, description="If true, end leg returns to the source airport")
 
     class Config:
         json_schema_extra = {
             "example": {
-                "airports": ["KJFK", "ORD", "KDEN", "KSFO"],
-                "circular": True
+                "icao_codes": ["KJFK", "KLAX", "EGLL", "EDDF", "RJTT"],
+                "request_date": "2025-09-26T12:00:00Z",
+                "circular": False
+            }
+        }
+
+
+class SimpleMultiLegRequest(BaseModel):
+    """Simplified request for just ICAO codes"""
+    icao_codes: List[str] = Field(..., min_length=2, description="Ordered ICAO list")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "icao_codes": ["KJFK", "KLAX", "EGLL", "EDDF", "RJTT"]
+            }
+        }
+
+
+# Flight Plans Database DTOs
+class CreateFlightPlanRequest(BaseModel):
+    """Request to create a flight plan in the database"""
+    route_details: Dict = Field(..., description="JSONB route information")
+    weather_summary: Dict = Field(..., description="JSONB weather analysis")
+    risk_analysis: Dict = Field(..., description="JSONB risk assessment")
+    map_layers: Dict = Field(..., description="JSONB map visualization data")
+    chart_data: Dict = Field(..., description="JSONB charts and graphs data")
+    user_id: Optional[str] = Field(None, description="User identifier")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "route_details": {
+                    "origin": "KJFK",
+                    "destination": "KLAX",
+                    "distance_nm": 2144.5,
+                    "estimated_time_min": 360
+                },
+                "weather_summary": {
+                    "summary_text": ["Clear skies", "Light winds"],
+                    "risk_index": "green"
+                },
+                "risk_analysis": {
+                    "risks": [],
+                    "overall_risk": "low"
+                },
+                "map_layers": {
+                    "route_coordinates": [[-73.7781, 40.6413], [-118.4081, 33.9425]]
+                },
+                "chart_data": {
+                    "generated_at": "2025-09-26T12:00:00Z"
+                },
+                "user_id": "user-123"
+            }
+        }
+
+
+class FlightPlanSearchRequest(BaseModel):
+    """Request to search flight plans"""
+    user_id: Optional[str] = Field(None, description="Filter by user ID")
+    date_from: Optional[datetime] = Field(None, description="Search from date")
+    date_to: Optional[datetime] = Field(None, description="Search to date")
+    limit: int = Field(50, description="Maximum results to return")
+    offset: int = Field(0, description="Number of records to skip")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "user_id": "user-123",
+                "date_from": "2025-09-01T00:00:00Z",
+                "date_to": "2025-09-30T23:59:59Z",
+                "limit": 20,
+                "offset": 0
             }
         }
 
@@ -71,7 +143,8 @@ class RouteSegmentSummary(BaseModel):
 
 class MultiLegRouteSummaryResponse(BaseModel):
     """Response summarizing a multi-leg (optionally circular) route"""
-    airports: List[str]
+    icao_codes: List[str]
+    request_date: Optional[datetime]
     circular: bool
     total_distance_km: float
     total_distance_nm: float

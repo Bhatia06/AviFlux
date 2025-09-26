@@ -17,8 +17,12 @@ from pyproj import Geod
 
 # Import new models and services
 from models import FlightPlanRequest, FlightPlanResponse, FlightPlan
-from models.dtos import MultiLegRouteRequest, MultiLegRouteSummaryResponse, RouteSegmentSummary
+from models.dtos import (
+    MultiLegRouteRequest, MultiLegRouteSummaryResponse, RouteSegmentSummary,
+    CreateFlightPlanRequest, FlightPlanSearchRequest
+)
 from services import FlightPlanService, RouteService
+from services.flight_plans_service import FlightPlansService, FlightPlanResponse as DBFlightPlanResponse
 from get_path import get_path_for_react
 
 # Load environment variables
@@ -193,6 +197,9 @@ logger.info("Airport database initialized successfully")
 flight_plan_service = FlightPlanService(airport_db)
 route_service = RouteService(airport_db)
 
+# Initialize flight plans database service
+flight_plans_db_service = FlightPlansService(airport_db._supabase_client)
+
 
 def calculate_flight_path(origin_icao: str, destination_icao: str) -> Dict:
     """
@@ -341,16 +348,17 @@ def get_multi_leg_route_summary(request: MultiLegRouteRequest):
 
     Request body:
     {
-      "airports": ["KJFK", "ORD", "KDEN", "KSFO"],
-      "circular": true
+      "icao_codes": ["KJFK", "KLAX", "EGLL", "EDDF", "RJTT"],
+      "request_date": "2025-09-26T12:00:00Z",
+      "circular": false
     }
     """
-    airports = [a.upper() for a in request.airports]
-    if len(airports) < 2:
+    icao_codes = [a.upper() for a in request.icao_codes]
+    if len(icao_codes) < 2:
         raise HTTPException(status_code=400, detail="At least two airports required")
 
     try:
-        data = route_service.calculate_multi_leg_route(airports, circular=request.circular)
+        data = route_service.calculate_multi_leg_route(icao_codes, circular=request.circular)
 
         segments = [
             RouteSegmentSummary(
@@ -363,7 +371,8 @@ def get_multi_leg_route_summary(request: MultiLegRouteRequest):
         ]
 
         return MultiLegRouteSummaryResponse(
-            airports=airports,
+            icao_codes=icao_codes,
+            request_date=request.request_date,
             circular=request.circular,
             total_distance_km=round(data['distance_km'], 2),
             total_distance_nm=round(data['distance_nm'], 2),
@@ -470,6 +479,241 @@ def get_flight_path(origin_icao: str, destination_icao: str):
     except Exception as e:
         logger.error(f"Error calculating flight path: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# Flight Plans Database Endpoints
+@app.post("/api/flight-plans", response_model=Dict, tags=["flight-plans"])
+async def create_flight_plan_db(
+    route_details: Dict,
+    weather_summary: Dict,
+    risk_analysis: Dict,
+    map_layers: Dict,
+    chart_data: Dict,
+    user_id: Optional[str] = None
+):
+    """Create a new flight plan in the database"""
+    result = await flight_plans_db_service.create_flight_plan(
+        route_details=route_details,
+        weather_summary=weather_summary,
+        risk_analysis=risk_analysis,
+        map_layers=map_layers,
+        chart_data=chart_data,
+        user_id=user_id
+    )
+    
+    if result.success and result.data:
+        return {
+            "success": True,
+            "message": result.message,
+            "data": flight_plans_db_service.format_for_frontend(result.data)
+        }
+    else:
+        raise HTTPException(status_code=400, detail=result.error or "Failed to create flight plan")
+
+
+@app.get("/api/flight-plans/{plan_id}", response_model=Dict, tags=["flight-plans"])
+async def get_flight_plan_db(plan_id: str):
+    """Get a specific flight plan by ID"""
+    result = await flight_plans_db_service.get_flight_plan(plan_id)
+    
+    if result.success and result.data:
+        return {
+            "success": True,
+            "message": result.message,
+            "data": flight_plans_db_service.format_for_frontend(result.data)
+        }
+    else:
+        raise HTTPException(status_code=404, detail=result.error or "Flight plan not found")
+
+
+@app.get("/api/flight-plans", response_model=Dict, tags=["flight-plans"])
+async def get_all_flight_plans_db(
+    limit: int = 50,
+    offset: int = 0,
+    user_id: Optional[str] = None
+):
+    """Get flight plans (optionally filtered by user)"""
+    if user_id:
+        result = await flight_plans_db_service.get_user_flight_plans(user_id, limit, offset)
+    else:
+        result = await flight_plans_db_service.get_all_flight_plans(limit, offset)
+    
+    if result.success and result.data:
+        # Format all flight plans for frontend
+        formatted_plans = [
+            flight_plans_db_service.format_for_frontend(plan)
+            for plan in result.data['flight_plans']
+        ]
+        
+        return {
+            "success": True,
+            "message": result.message,
+            "data": {
+                "flight_plans": formatted_plans,
+                "count": result.data['count'],
+                "limit": limit,
+                "offset": offset
+            }
+        }
+    else:
+        raise HTTPException(status_code=500, detail=result.error or "Failed to retrieve flight plans")
+
+
+@app.put("/api/flight-plans/{plan_id}", response_model=Dict, tags=["flight-plans"])
+async def update_flight_plan_db(plan_id: str, updates: Dict):
+    """Update a flight plan"""
+    result = await flight_plans_db_service.update_flight_plan(plan_id, updates)
+    
+    if result.success and result.data:
+        return {
+            "success": True,
+            "message": result.message,
+            "data": flight_plans_db_service.format_for_frontend(result.data)
+        }
+    else:
+        raise HTTPException(status_code=404, detail=result.error or "Failed to update flight plan")
+
+
+@app.delete("/api/flight-plans/{plan_id}", response_model=Dict, tags=["flight-plans"])
+async def delete_flight_plan_db(plan_id: str):
+    """Delete a flight plan"""
+    result = await flight_plans_db_service.delete_flight_plan(plan_id)
+    
+    if result.success:
+        return {
+            "success": True,
+            "message": result.message,
+            "data": result.data
+        }
+    else:
+        raise HTTPException(status_code=404, detail=result.error)
+
+
+@app.post("/api/flight-plans/search", response_model=Dict, tags=["flight-plans"])
+async def search_flight_plans_db(
+    search_criteria: Dict,
+    limit: int = 50,
+    offset: int = 0
+):
+    """Search flight plans based on criteria"""
+    result = await flight_plans_db_service.search_flight_plans(
+        search_criteria, limit, offset
+    )
+    
+    if result.success and result.data:
+        # Format all flight plans for frontend
+        formatted_plans = [
+            flight_plans_db_service.format_for_frontend(plan)
+            for plan in result.data['flight_plans']
+        ]
+        
+        return {
+            "success": True,
+            "message": result.message,
+            "data": {
+                "flight_plans": formatted_plans,
+                "count": result.data['count'],
+                "search_criteria": search_criteria,
+                "limit": limit,
+                "offset": offset
+            }
+        }
+    else:
+        raise HTTPException(status_code=500, detail=result.error or "Search failed")
+
+
+@app.post("/api/flight-plans/generate-and-save", response_model=Dict, tags=["flight-plans"])
+async def generate_and_save_flight_plan(
+    origin_icao: str,
+    destination_icao: str,
+    user_id: Optional[str] = None,
+    departure_time: Optional[str] = None
+):
+    """Generate a flight plan and save it to the database"""
+    try:
+        # Parse departure time if provided
+        parsed_departure_time = None
+        if departure_time:
+            from datetime import datetime
+            parsed_departure_time = datetime.fromisoformat(departure_time.replace('Z', '+00:00'))
+        
+        # Generate the flight plan using existing service
+        flight_plan = await flight_plan_service.generate_flight_plan(
+            origin_icao=origin_icao,
+            destination_icao=destination_icao,
+            departure_time=parsed_departure_time
+        )
+        
+        # Prepare data for database storage
+        route_details = {
+            "origin": origin_icao,
+            "destination": destination_icao,
+            "airports": flight_plan.route.airports,
+            "departure_time": flight_plan.route.departure_time.isoformat() if flight_plan.route.departure_time else None,
+            "distance_nm": flight_plan.route.distance_nm,
+            "estimated_time_min": flight_plan.route.estimated_time_min
+        }
+        
+        weather_summary = {
+            "summary_text": flight_plan.summary.text,
+            "risk_index": flight_plan.summary.risk_index
+        }
+        
+        risk_analysis = {
+            "risks": [
+                {
+                    "type": risk.type,
+                    "subtype": risk.subtype,
+                    "location": risk.location,
+                    "severity": risk.severity,
+                    "description": risk.description,
+                    "geojson": risk.geojson
+                }
+                for risk in flight_plan.risks
+            ],
+            "overall_risk": flight_plan.summary.risk_index
+        }
+        
+        map_layers = flight_plan.map_layers.model_dump() if flight_plan.map_layers else {}
+        
+        chart_data = {
+            "plan_id": flight_plan.plan_id,
+            "generated_at": flight_plan.generated_at.isoformat()
+        }
+        
+        # Save to database
+        save_result = await flight_plans_db_service.create_flight_plan(
+            route_details=route_details,
+            weather_summary=weather_summary,
+            risk_analysis=risk_analysis,
+            map_layers=map_layers,
+            chart_data=chart_data,
+            user_id=user_id
+        )
+        
+        if save_result.success and save_result.data:
+            return {
+                "success": True,
+                "message": "Flight plan generated and saved successfully",
+                "data": {
+                    "flight_plan": flight_plan.model_dump(),
+                    "database_record": flight_plans_db_service.format_for_frontend(save_result.data)
+                }
+            }
+        else:
+            # Return the generated flight plan even if saving failed
+            return {
+                "success": False,
+                "message": "Flight plan generated but failed to save to database",
+                "data": {
+                    "flight_plan": flight_plan.model_dump(),
+                    "save_error": save_result.error
+                }
+            }
+            
+    except Exception as e:
+        logger.error(f"Error generating and saving flight plan: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":
