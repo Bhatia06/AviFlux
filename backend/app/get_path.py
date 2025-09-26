@@ -107,7 +107,7 @@ def calculate_great_circle_path(icao1: str, icao2: str, num_points: int = 100) -
     
     # Calculate great circle path
     path_lons, path_lats, back_azimuths = geod.npts(
-        lon1, lat1, lon2, lat2, npts=num_points-2, initial_idx=0, terminal_idx=0
+        lon1, lat1, lon2, lat2, npts=num_points-2
     )
     
     # Include start and end points
