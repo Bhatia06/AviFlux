@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import GoogleLogo from ".././assets/logo-google.png";
 import Back from ".././assets/BackGround.png";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 
 export default function LoginPage() {
     return (
@@ -67,19 +67,7 @@ export default function LoginPage() {
                         <hr className="flex-grow border-gray-700" />
                     </div>
 
-                    {/* Social Login */}
-                    <Button
-                        variant="outline"
-                        className="w-full flex items-center justify-center gap-2 border-gray-700 hover:bg-gray-800"
-                        onClick={() => (window.location.href = "/auth/google")}
-                    >
-                        <img
-                            src={GoogleLogo}
-                            alt="Google"
-                            className="w-5 h-5 invert"
-                        />
-                        Google
-                    </Button>
+                    <GoogleSignInButton />
 
                     <p className="text-gray-500 text-xs mt-6 text-center">
                         Dont have a account?{" "}
