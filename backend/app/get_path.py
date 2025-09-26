@@ -3,6 +3,12 @@ import numpy as np
 from pyproj import Geod
 from typing import List, Tuple, Dict, Optional
 import logging
+import os
+from dotenv import load_dotenv
+from supabase import create_client, Client
+
+# Load environment variables
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -11,11 +17,20 @@ logger = logging.getLogger(__name__)
 # Global variable to store the filtered airports dataframe
 _airports_df: Optional[pd.DataFrame] = None
 
-AIRPORTS_CSV_URL = "https://davidmegginson.github.io/ourairports-data/airports.csv"
+# Supabase configuration
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+
+# Validate environment variables
+if not SUPABASE_URL or not SUPABASE_ANON_KEY:
+    raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY must be set in .env file")
+
+# Initialize Supabase client
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 def load_airports_data() -> pd.DataFrame:
     """
-    Load and filter airports data from CSV.
+    Load and filter airports data from Supabase.
     Filters for medium_airport and large_airport types only.
     """
     global _airports_df
@@ -24,24 +39,45 @@ def load_airports_data() -> pd.DataFrame:
         logger.info("Using cached airports data")
         return _airports_df
     
-    logger.info("Loading airports data from CSV...")
+    logger.info("Loading airports data from Supabase...")
     
     try:
-        # Load the full dataset
-        df = pd.read_csv(AIRPORTS_CSV_URL)
-        logger.info(f"Loaded {len(df)} airports from CSV")
+        # Query Supabase for all airports data using pagination
+        # This ensures we get all records regardless of the total count
+        all_data = []
+        page_size = 1000
+        offset = 0
         
-        # Filter for medium_airport and large_airport types
-        filtered_df = df[df['type'].isin(['medium_airport', 'large_airport'])].copy()
-        logger.info(f"Filtered to {len(filtered_df)} medium and large airports")
+        while True:
+            response = supabase.table('airports').select('*').range(offset, offset + page_size - 1).execute()
+            
+            if not response.data:
+                break
+            
+            all_data.extend(response.data)
+            logger.info(f"Loaded {len(response.data)} records (total so far: {len(all_data)})")
+            
+            # If we got less than the page size, we've reached the end
+            if len(response.data) < page_size:
+                break
+            
+            offset += page_size
         
-        # Cache the filtered dataframe
-        _airports_df = filtered_df
+        if not all_data:
+            logger.error("No airports data found in Supabase")
+            raise ValueError("No airports data found in database")
         
-        return filtered_df
+        # Convert to DataFrame
+        df = pd.DataFrame(all_data)
+        logger.info(f"Successfully loaded {len(df)} total airports from Supabase")
+        
+        # Cache the dataframe
+        _airports_df = df
+        
+        return df
         
     except Exception as e:
-        logger.error(f"Error loading airports data: {e}")
+        logger.error(f"Error loading airports data from Supabase: {e}")
         raise
 
 
@@ -57,8 +93,8 @@ def find_airport_by_icao(icao_code: str) -> Optional[Dict]:
     """
     df = load_airports_data()
     
-    # Filter by ICAO code (stored in 'ident' column)
-    airport = df[df['ident'] == icao_code.upper()]
+    # Filter by ICAO code (stored in 'icao_code' column from Supabase)
+    airport = df[df['icao_code'] == icao_code.upper()]
     
     if airport.empty:
         logger.warning(f"Airport with ICAO code {icao_code} not found")
@@ -66,12 +102,12 @@ def find_airport_by_icao(icao_code: str) -> Optional[Dict]:
     
     airport_data = airport.iloc[0]
     return {
-        'icao': airport_data['ident'],
+        'icao': airport_data['icao_code'],
         'name': airport_data['name'],
-        'latitude': float(airport_data['latitude_deg']),
-        'longitude': float(airport_data['longitude_deg']),
-        'type': airport_data['type'],
-        'country': airport_data['iso_country']
+        'latitude': float(airport_data['latitude']),
+        'longitude': float(airport_data['longitude']),
+        'type': 'airport',  # Since we only have medium/large airports
+        'country': 'Unknown'  # This field might not be available in filtered data
     }
 
 
@@ -106,9 +142,16 @@ def calculate_great_circle_path(icao1: str, icao2: str, num_points: int = 100) -
     geod = Geod(ellps='WGS84')
     
     # Calculate great circle path
-    path_lons, path_lats, back_azimuths = geod.npts(
-        lon1, lat1, lon2, lat2, npts=num_points-2
-    )
+    # geod.npts() returns a list of points, not separate arrays
+    path_points = geod.npts(lon1, lat1, lon2, lat2, npts=num_points-2)
+    
+    # Extract longitudes and latitudes from the points
+    if path_points:
+        path_lons = [point[0] for point in path_points]
+        path_lats = [point[1] for point in path_points]
+    else:
+        path_lons = []
+        path_lats = []
     
     # Include start and end points
     full_lons = [lon1] + path_lons + [lon2]
@@ -207,7 +250,7 @@ def test_manual_input():
         
         if result['success']:
             data = result['data']
-            print(f"\n✅ Path calculated successfully!")
+            print(f"\nPath calculated successfully:---")
             print(f"From: {data['departure']['name']} ({data['departure']['icao']})")
             print(f"To: {data['arrival']['name']} ({data['arrival']['icao']})")
             print(f"Distance: {data['path']['total_distance_km']} km ({data['path']['total_distance_nm']} nm)")
