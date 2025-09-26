@@ -673,9 +673,78 @@ def get_flight_path(origin_icao: str, destination_icao: str):
 
 
 @app.get("/api/path", tags=["flight-path"])
-def get_flight_path_query_params(departure: str, arrival: str):
+def get_flight_path_multi_icao(icao_codes: str):
     """
-    Get flight path data using query parameters (matches documentation)
+    Get flight paths for multiple ICAO codes (comma-separated)
+    
+    Args:
+        icao_codes: Comma-separated list of ICAO codes (e.g., "KJFK,EGLL,OMDB,NZAA")
+        
+    Returns:
+        Multi-leg route data with path segments for each connection
+        
+    Raises:
+        HTTPException: If airports are not found or calculation fails
+    """
+    try:
+        # Parse comma-separated ICAO codes
+        airports = [icao.strip().upper() for icao in icao_codes.split(',')]
+        
+        # Validate minimum airports
+        if len(airports) < 2:
+            raise HTTPException(status_code=400, detail="At least 2 airports required")
+        
+        if len(airports) > 10:
+            raise HTTPException(status_code=400, detail="Maximum 10 airports allowed")
+        
+        # Validate ICAO codes
+        for icao in airports:
+            if len(icao) != 4:
+                raise HTTPException(status_code=400, detail=f"Invalid ICAO code: {icao}")
+        
+        logger.info(f"Calculating multi-ICAO path: {' -> '.join(airports)}")
+        
+        # If only 2 airports, use simple path calculation
+        if len(airports) == 2:
+            result = get_path_for_react(airports[0], airports[1])
+            if result['success']:
+                logger.info(f"Single path calculated successfully: {airports[0]} -> {airports[1]}")
+                return result
+            else:
+                logger.error(f"Path calculation failed: {result.get('error', 'Unknown error')}")
+                raise HTTPException(status_code=404, detail=result.get('error', 'Path calculation failed'))
+        
+        # For multiple airports, use route service for multi-leg calculation
+        data = route_service.calculate_multi_leg_route(airports, circular=False)
+        
+        if data:
+            logger.info(f"Multi-leg route calculated successfully for {len(airports)} airports")
+            
+            # Format response to match expected structure
+            response = {
+                "success": True,
+                "data": {
+                    "route_type": "multi_leg",
+                    "total_airports": len(airports),
+                    "route_summary": data
+                }
+            }
+            return response
+        else:
+            logger.error("Multi-leg route calculation returned no data")
+            raise HTTPException(status_code=500, detail="Route calculation failed")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error calculating multi-ICAO flight path: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.get("/api/path/simple", tags=["flight-path"])
+def get_flight_path_simple(departure: str, arrival: str):
+    """
+    Get simple flight path data between two airports (legacy endpoint)
     
     Args:
         departure: Origin airport ICAO code (4 letters)
@@ -683,16 +752,13 @@ def get_flight_path_query_params(departure: str, arrival: str):
         
     Returns:
         Flight path data formatted for frontend
-        
-    Raises:
-        HTTPException: If airports are not found or calculation fails
     """
     # Validate ICAO codes
     if len(departure) != 4 or len(arrival) != 4:
         raise HTTPException(status_code=400, detail="ICAO codes must be 4 characters long")
     
     try:
-        logger.info(f"Calculating path with query params: {departure} -> {arrival}")
+        logger.info(f"Calculating simple path: {departure} -> {arrival}")
         
         # Use get_path functionality
         result = get_path_for_react(departure, arrival)

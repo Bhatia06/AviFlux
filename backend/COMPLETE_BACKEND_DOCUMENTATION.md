@@ -585,11 +585,95 @@ Content-Type: application/json
 
 #### Flight Path Endpoints
 
-**1. Calculate Single Path**
+**1. Calculate Multi-ICAO Path (Enhanced)**
 ```http
-GET /api/path?departure=KJFK&arrival=EGLL
+GET /api/path?icao_codes=KJFK,EGLL,OMDB,NZAA
 Authorization: Bearer eyJhbGciOiJSUzI1NiIs...
 ```
+
+**Parameters:**
+- `icao_codes`: Comma-separated list of ICAO airport codes (2-10 airports)
+
+**Response for Multiple Airports:**
+```json
+{
+    "success": true,
+    "data": {
+        "route_type": "multi_leg",
+        "total_airports": 4,
+        "route_summary": {
+            "total_segments": 3,
+            "total_distance_km": 24718.42,
+            "total_distance_nm": 13346.88,
+            "total_estimated_duration_hours": 28.5,
+            "segments": [
+                {
+                    "segment_number": 1,
+                    "departure": "KJFK",
+                    "arrival": "EGLL",
+                    "distance_km": 5554.78,
+                    "distance_nm": 2999.12,
+                    "estimated_duration_hours": 8.5,
+                    "path_coordinates": [...],
+                    "antimeridian_crossing": false
+                },
+                {
+                    "segment_number": 2,
+                    "departure": "EGLL",
+                    "arrival": "OMDB",
+                    "distance_km": 5497.52,
+                    "distance_nm": 2968.64,
+                    "estimated_duration_hours": 7.2,
+                    "path_coordinates": [...],
+                    "antimeridian_crossing": false
+                }
+            ]
+        }
+    }
+}
+```
+
+**Response for Two Airports (Legacy Format):**
+```json
+{
+    "success": true,
+    "data": {
+        "departure": {
+            "icao": "KJFK",
+            "name": "John F Kennedy International Airport",
+            "country": "United States",
+            "coordinates": [-73.779317, 40.639447]
+        },
+        "arrival": {
+            "icao": "EGLL", 
+            "name": "London Heathrow Airport",
+            "country": "United Kingdom",
+            "coordinates": [-0.461389, 51.4775]
+        },
+        "path": {
+            "coordinates": [
+                [-73.779317, 40.639447],
+                [-72.5, 41.2],
+                ...
+                [-0.461389, 51.4775]
+            ],
+            "total_distance_km": 5554.78,
+            "total_distance_nm": 2999.12,
+            "antimeridian_crossing": false
+        }
+    }
+}
+```
+
+**2. Calculate Simple Path (Legacy - Two Airports Only)**
+```http
+GET /api/path/simple?departure=KJFK&arrival=EGLL
+Authorization: Bearer eyJhbGciOiJSUzI1NiIs...
+```
+
+**Parameters:**
+- `departure`: Origin airport ICAO code (4 letters)
+- `arrival`: Destination airport ICAO code (4 letters)
 
 **Response:**
 ```json
@@ -623,15 +707,15 @@ Authorization: Bearer eyJhbGciOiJSUzI1NiIs...
 }
 ```
 
-**2. Multi-Leg Route Calculation**
+**3. Multi-Leg Route Calculation (POST)**
 ```http
 POST /api/route/multi-leg
 Authorization: Bearer eyJhbGciOiJSUzI1NiIs...
 Content-Type: application/json
 
 {
-    "airports": ["KJFK", "EGLL", "OMDB", "NZAA"],
-    "include_return": false
+    "icao_codes": ["KJFK", "EGLL", "OMDB", "NZAA"],
+    "circular": false
 }
 ```
 
@@ -659,6 +743,45 @@ Content-Type: application/json
     }
 }
 ```
+
+#### Enhanced Flight Path Usage Examples
+
+**Multi-ICAO Path Examples:**
+
+1. **Two Airports (Simple Path):**
+   ```bash
+   GET /api/path?icao_codes=KJFK,EGLL
+   # Returns legacy format for compatibility
+   ```
+
+2. **Three Airports (Multi-leg):**
+   ```bash
+   GET /api/path?icao_codes=KJFK,EGLL,OMDB
+   # Returns multi-leg route summary
+   ```
+
+3. **Complex Multi-leg Route (Up to 10 airports):**
+   ```bash
+   GET /api/path?icao_codes=KJFK,EGLL,OMDB,NZAA,YSSY,RJTT,VHHH
+   # Returns complete multi-leg route with all segments
+   ```
+
+4. **Round-the-World Route:**
+   ```bash
+   GET /api/path?icao_codes=KJFK,EGLL,OMDB,VIDP,VTBS,RJTT,KSEA,KJFK
+   # Include starting airport at end for circular route
+   ```
+
+**Response Format Differences:**
+
+- **2 Airports**: Returns legacy single-path format
+- **3+ Airports**: Returns multi-leg route summary with segments
+
+**Alternative Endpoints:**
+
+- **Legacy Simple Path**: `GET /api/path/simple?departure=KJFK&arrival=EGLL`
+- **POST Multi-leg**: `POST /api/route/multi-leg` with JSON body
+- **Path Parameters**: `GET /api/path/KJFK/EGLL` (original format)
 
 #### Flight Plan Management
 
