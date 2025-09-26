@@ -132,6 +132,24 @@ class FlightPlanSearchRequest(BaseModel):
         }
 
 
+class MultiICAOFlightPlanRequest(BaseModel):
+    """Request for flight plan generation with multiple ICAO codes"""
+    icao_codes: List[str] = Field(..., min_length=2, description="Ordered list of ICAO codes (minimum 2 for origin and destination)")
+    departure_time: Optional[datetime] = Field(None, description="Planned departure time (optional)")
+    user_id: Optional[str] = Field(None, description="User identifier (optional)")
+    circular: bool = Field(False, description="If true, return to the first airport")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "icao_codes": ["KJFK", "KLAX", "EGLL", "EDDF"],
+                "departure_time": "2025-09-26T12:00:00Z",
+                "user_id": "user-123",
+                "circular": False
+            }
+        }
+
+
 class RouteSegmentSummary(BaseModel):
     """Per-leg summary between two consecutive airports"""
     origin: str

@@ -19,7 +19,7 @@ from pyproj import Geod
 from models import FlightPlanRequest, FlightPlanResponse, FlightPlan
 from models.dtos import (
     MultiLegRouteRequest, MultiLegRouteSummaryResponse, RouteSegmentSummary,
-    CreateFlightPlanRequest, FlightPlanSearchRequest
+    CreateFlightPlanRequest, FlightPlanSearchRequest, MultiICAOFlightPlanRequest
 )
 from services import FlightPlanService, RouteService
 from services.flight_plans_service import FlightPlansService, FlightPlanResponse as DBFlightPlanResponse
@@ -389,20 +389,164 @@ def get_multi_leg_route_summary(request: MultiLegRouteRequest):
 
 
 @app.post("/api/flightplan/generate", 
+          response_model=Dict,
+          tags=["flight-plan"])
+async def generate_multi_icao_flight_plan(request: MultiICAOFlightPlanRequest):
+    """
+    Generate a complete flight plan with multiple ICAO codes
+    
+    Args:
+        request: MultiICAOFlightPlanRequest with list of ICAO codes, optional departure time, user_id, and circular option
+        
+    Returns:
+        FlightPlanResponse with complete flight plan data for multi-leg route
+        
+    Raises:
+        HTTPException: If airports are not found or generation fails
+    """
+    try:
+        # Validate ICAO codes
+        icao_codes = [code.upper() for code in request.icao_codes]
+        
+        # Validate each ICAO code length
+        for code in icao_codes:
+            if len(code) != 4:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"ICAO code '{code}' must be exactly 4 characters long"
+                )
+        
+        # Ensure minimum of 2 airports
+        if len(icao_codes) < 2:
+            raise HTTPException(
+                status_code=400,
+                detail="At least 2 airports are required for a flight plan"
+            )
+        
+        logger.info(f"Generating multi-ICAO flight plan: {' -> '.join(icao_codes)}")
+        
+        # Handle circular route
+        if request.circular and len(icao_codes) > 2:
+            # Add the first airport at the end for circular route
+            route_codes = icao_codes + [icao_codes[0]]
+        else:
+            route_codes = icao_codes
+        
+        # Generate flight plans for each leg
+        flight_legs = []
+        total_distance_km = 0
+        total_distance_nm = 0
+        total_estimated_time = 0
+        all_risks = []
+        
+        for i in range(len(route_codes) - 1):
+            origin = route_codes[i]
+            destination = route_codes[i + 1]
+            
+            logger.info(f"Generating leg {i + 1}: {origin} -> {destination}")
+            
+            # Generate individual flight plan for this leg
+            leg_flight_plan = await flight_plan_service.generate_flight_plan(
+                origin_icao=origin,
+                destination_icao=destination,
+                departure_time=request.departure_time
+            )
+            
+            flight_legs.append({
+                'leg_number': i + 1,
+                'origin': origin,
+                'destination': destination,
+                'flight_plan': leg_flight_plan,
+                'distance_nm': leg_flight_plan.route.distance_nm,
+                'estimated_time_min': leg_flight_plan.route.estimated_time_min
+            })
+            
+            # Accumulate totals
+            total_distance_nm += leg_flight_plan.route.distance_nm
+            total_estimated_time += leg_flight_plan.route.estimated_time_min
+            all_risks.extend(leg_flight_plan.risks)
+        
+        total_distance_km = total_distance_nm * 1.852  # Convert NM to KM
+        
+        # Generate overall route summary using route service
+        multi_leg_data = route_service.calculate_multi_leg_route(icao_codes, circular=request.circular)
+        
+        # Create comprehensive response
+        response_data = {
+            'success': True,
+            'message': f'Multi-leg flight plan generated successfully for {len(flight_legs)} leg(s)',
+            'data': {
+                'overview': {
+                    'icao_codes': icao_codes,
+                    'circular': request.circular,
+                    'total_legs': len(flight_legs),
+                    'total_distance_km': round(total_distance_km, 2),
+                    'total_distance_nm': round(total_distance_nm, 2),
+                    'total_estimated_time_min': total_estimated_time,
+                    'departure_time': request.departure_time.isoformat() if request.departure_time else None,
+                    'user_id': request.user_id
+                },
+                'route_coordinates': {
+                    'coordinates': multi_leg_data['coordinates'],
+                    'total_points': multi_leg_data['total_points']
+                },
+                'flight_legs': [
+                    {
+                        'leg_number': leg['leg_number'],
+                        'origin': leg['origin'],
+                        'destination': leg['destination'],
+                        'distance_km': round(leg['distance_nm'] * 1.852, 2),
+                        'distance_nm': round(leg['distance_nm'], 2),
+                        'estimated_time_min': leg['estimated_time_min'],
+                        'summary': {
+                            'text': leg['flight_plan'].summary.text,
+                            'risk_index': leg['flight_plan'].summary.risk_index
+                        },
+                        'risks': [
+                            {
+                                'type': risk.type,
+                                'subtype': risk.subtype,
+                                'location': risk.location,
+                                'severity': risk.severity,
+                                'description': risk.description
+                            }
+                            for risk in leg['flight_plan'].risks
+                        ]
+                    }
+                    for leg in flight_legs
+                ],
+                'overall_risks': {
+                    'total_risks': len(all_risks),
+                    'high_severity': len([r for r in all_risks if r.severity == 'high']),
+                    'medium_severity': len([r for r in all_risks if r.severity == 'medium']),
+                    'low_severity': len([r for r in all_risks if r.severity == 'low']),
+                    'risk_summary': list(set([r.type for r in all_risks]))  # Unique risk types
+                }
+            }
+        }
+        
+        return response_data
+        
+    except ValueError as e:
+        logger.error(f"Validation error: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error generating multi-ICAO flight plan: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@app.post("/api/flightplan/generate-simple", 
           response_model=FlightPlanResponse,
           tags=["flight-plan"])
-async def generate_flight_plan(request: FlightPlanRequest):
+async def generate_simple_flight_plan(request: FlightPlanRequest):
     """
-    Generate a complete flight plan with weather analysis
+    Generate a simple two-airport flight plan (backwards compatibility)
     
     Args:
         request: FlightPlanRequest with origin, destination, and optional departure time
         
     Returns:
         FlightPlanResponse with complete flight plan data
-        
-    Raises:
-        HTTPException: If airports are not found or generation fails
     """
     try:
         # Validate ICAO codes
@@ -415,7 +559,7 @@ async def generate_flight_plan(request: FlightPlanRequest):
                 detail="ICAO codes must be exactly 4 characters long"
             )
         
-        logger.info(f"Generating flight plan: {origin_icao} -> {destination_icao}")
+        logger.info(f"Generating simple flight plan: {origin_icao} -> {destination_icao}")
         
         # Generate flight plan using service
         flight_plan = await flight_plan_service.generate_flight_plan(

@@ -1,11 +1,17 @@
+"""
+Improved Great Circle Path Calculation
+Fixes for accurate distance calculation and proper path visualization
+"""
+
 import pandas as pd
 import numpy as np
-from pyproj import Geod
+from pyproj import Geod, Transformer
 from typing import List, Tuple, Dict, Optional
 import logging
 import os
 from dotenv import load_dotenv
 from supabase import create_client, Client
+import math
 
 # Load environment variables
 load_dotenv()
@@ -28,10 +34,10 @@ if not SUPABASE_URL or not SUPABASE_ANON_KEY:
 # Initialize Supabase client
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
+
 def load_airports_data() -> pd.DataFrame:
     """
     Load and filter airports data from Supabase.
-    Filters for medium_airport and large_airport types only.
     """
     global _airports_df
     
@@ -42,8 +48,6 @@ def load_airports_data() -> pd.DataFrame:
     logger.info("Loading airports data from Supabase...")
     
     try:
-        # Query Supabase for all airports data using pagination
-        # This ensures we get all records regardless of the total count
         all_data = []
         page_size = 1000
         offset = 0
@@ -57,7 +61,6 @@ def load_airports_data() -> pd.DataFrame:
             all_data.extend(response.data)
             logger.info(f"Loaded {len(response.data)} records (total so far: {len(all_data)})")
             
-            # If we got less than the page size, we've reached the end
             if len(response.data) < page_size:
                 break
             
@@ -67,13 +70,10 @@ def load_airports_data() -> pd.DataFrame:
             logger.error("No airports data found in Supabase")
             raise ValueError("No airports data found in database")
         
-        # Convert to DataFrame
         df = pd.DataFrame(all_data)
         logger.info(f"Successfully loaded {len(df)} total airports from Supabase")
         
-        # Cache the dataframe
         _airports_df = df
-        
         return df
         
     except Exception as e:
@@ -82,18 +82,9 @@ def load_airports_data() -> pd.DataFrame:
 
 
 def find_airport_by_icao(icao_code: str) -> Optional[Dict]:
-    """
-    Find airport by ICAO code and return its details.
-    
-    Args:
-        icao_code: 4-letter ICAO airport code
-        
-    Returns:
-        Dictionary with airport details or None if not found
-    """
+    """Find airport by ICAO code and return its details."""
     df = load_airports_data()
     
-    # Filter by ICAO code (stored in 'icao_code' column from Supabase)
     airport = df[df['icao_code'] == icao_code.upper()]
     
     if airport.empty:
@@ -106,8 +97,8 @@ def find_airport_by_icao(icao_code: str) -> Optional[Dict]:
         'name': airport_data['name'],
         'latitude': float(airport_data['latitude']),
         'longitude': float(airport_data['longitude']),
-        'type': 'airport',  # Since we only have medium/large airports
-        'country': 'Unknown'  # This field might not be available in filtered data
+        'type': 'airport',
+        'country': 'Unknown'
     }
 
 
@@ -118,8 +109,6 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     
     Returns distance in meters.
     """
-    import math
-    
     # Convert to radians
     lat1_rad = math.radians(lat1)
     lon1_rad = math.radians(lon1)
@@ -172,18 +161,11 @@ def handle_antimeridian_crossing(lon1: float, lon2: float) -> Tuple[float, float
             lon1 += 360
     
     return lon1, lon2
-    
-def calculate_great_circle_path(icao1: str, icao2: str, num_points: int = 100) -> Dict:
+
+
+def calculate_great_circle_path_improved(icao1: str, icao2: str, num_points: int = 100) -> Dict:
     """
     Improved great circle path calculation with better accuracy and antimeridian handling.
-    
-    Args:
-        icao1: First airport ICAO code
-        icao2: Second airport ICAO code  
-        num_points: Number of points along the path (default: 100)
-        
-    Returns:
-        Dictionary containing path coordinates and airport details
     """
     # Find both airports
     airport1 = find_airport_by_icao(icao1)
@@ -254,63 +236,19 @@ def calculate_great_circle_path(icao1: str, icao2: str, num_points: int = 100) -
             prev_lon = cleaned_coordinates[-1][0]
             lon_diff = abs(lon - prev_lon)
             
-            # If jump is > 180°, we likely have antimeridian crossing issue
+            # If jump is > 180°, we might need to adjust
             if lon_diff > 180:
-                # Find which adjustment gives smaller jump
+                # Choose the longitude that keeps the path shorter
                 if lon > prev_lon:
-                    # Try shifting current point left
-                    alt_lon = lon - 360
-                    if abs(alt_lon - prev_lon) < lon_diff:
-                        lon = alt_lon
+                    lon = lon - 360 if lon - 360 > -180 else lon
                 else:
-                    # Try shifting current point right  
-                    alt_lon = lon + 360
-                    if abs(alt_lon - prev_lon) < lon_diff:
-                        lon = alt_lon
+                    lon = lon + 360 if lon + 360 < 180 else lon
         
         cleaned_coordinates.append([lon, lat])
     
-    # Final pass: normalize all longitudes to [-180, 180] range
-    final_coordinates = []
-    for lon, lat in cleaned_coordinates:
-        # Normalize longitude to [-180, 180]
-        while lon > 180:
-            lon -= 360
-        while lon < -180:
-            lon += 360
-        final_coordinates.append([lon, lat])
-    
     # Extract cleaned coordinates
-    final_lons = [coord[0] for coord in final_coordinates]
-    final_lats = [coord[1] for coord in final_coordinates]
-    
-    # For antimeridian crossings, provide alternative coordinates for visualization
-    crosses_antimeridian = False
-    visualization_lons = []
-    
-    for i in range(len(final_lons)):
-        lon = final_lons[i]
-        
-        if i > 0:
-            prev_lon = visualization_lons[-1] if visualization_lons else final_lons[i-1]
-            lon_diff = abs(lon - prev_lon)
-            
-            # If jump > 180°, we're crossing antimeridian
-            if lon_diff > 180:
-                crosses_antimeridian = True
-                # For visualization, keep longitude continuous
-                if prev_lon > 0 and lon < 0:
-                    # Going from positive to negative, add 360 to longitude
-                    visualization_lons.append(lon + 360)
-                elif prev_lon < 0 and lon > 0:
-                    # Going from negative to positive, subtract 360 from longitude  
-                    visualization_lons.append(lon - 360)
-                else:
-                    visualization_lons.append(lon)
-            else:
-                visualization_lons.append(lon)
-        else:
-            visualization_lons.append(lon)
+    final_lons = [coord[0] for coord in cleaned_coordinates]
+    final_lats = [coord[1] for coord in cleaned_coordinates]
     
     # Calculate distances in different units
     distance_km = distance_meters / 1000
@@ -325,10 +263,6 @@ def calculate_great_circle_path(icao1: str, icao2: str, num_points: int = 100) -
             'longitudes': final_lons,
             'latitudes': final_lats
         },
-        'visualization_coordinates': {
-            'longitudes': visualization_lons,
-            'latitudes': final_lats
-        },
         'total_distance_meters': distance_meters,
         'total_distance_km': distance_km,
         'total_distance_nm': distance_nm,
@@ -336,19 +270,29 @@ def calculate_great_circle_path(icao1: str, icao2: str, num_points: int = 100) -
         'back_azimuth': back_azimuth,
         'num_points': len(final_lons),
         'haversine_distance_km': haversine_dist / 1000,  # For comparison
-        'antimeridian_crossing': crosses_antimeridian
+        'antimeridian_crossing': abs(lon2 - lon1) > 180
     }
 
 
-def get_path_for_react(icao1: str, icao2: str) -> Dict:
+def get_path_for_api_improved(icao1: str, icao2: str) -> Dict:
     """
-    Main function to be called from FastAPI.
-    Returns path data in format suitable for React frontend.
+    Improved main function for API calls with better error handling and validation.
     """
     try:
-        path_data = calculate_great_circle_path(icao1, icao2)
+        path_data = calculate_great_circle_path_improved(icao1, icao2)
         
-        # Format for easier consumption by React
+        # Create coordinates in proper [longitude, latitude] format for GeoJSON/mapping
+        coordinates = list(zip(
+            path_data['path_coordinates']['longitudes'],
+            path_data['path_coordinates']['latitudes']
+        ))
+        
+        # Validate coordinates are reasonable
+        for i, (lon, lat) in enumerate(coordinates):
+            if not (-180 <= lon <= 180) or not (-90 <= lat <= 90):
+                logger.warning(f"Invalid coordinate at index {i}: [{lon}, {lat}]")
+        
+        # Format for easier consumption by frontend
         return {
             'success': True,
             'data': {
@@ -371,70 +315,66 @@ def get_path_for_react(icao1: str, icao2: str) -> Dict:
                     ]
                 },
                 'path': {
-                    'coordinates': list(zip(
-                        path_data['visualization_coordinates']['longitudes'],
-                        path_data['visualization_coordinates']['latitudes']
-                    )),
+                    'coordinates': coordinates,  # [longitude, latitude] pairs
                     'total_distance_km': round(path_data['total_distance_km'], 2),
                     'total_distance_nm': round(path_data['total_distance_nm'], 2),
-                    'antimeridian_crossing': path_data['antimeridian_crossing']
+                    'haversine_distance_km': round(path_data['haversine_distance_km'], 2),
+                    'antimeridian_crossing': path_data['antimeridian_crossing'],
+                    'total_points': path_data['num_points']
+                },
+                'metadata': {
+                    'forward_azimuth': round(path_data['forward_azimuth'], 2),
+                    'back_azimuth': round(path_data['back_azimuth'], 2),
+                    'calculation_method': 'WGS84 Geodesic with Antimeridian Handling'
                 }
             }
         }
         
     except Exception as e:
-        logger.error(f"Error calculating path: {e}")
+        logger.error(f"Error calculating improved path: {e}")
         return {
             'success': False,
             'error': str(e)
         }
 
 
-def test_manual_input():
-    """
-    Test function with manual ICAO code input.
-    """
-    print("=== AviFlux Great Circle Path Calculator ===")
-    print("Enter two ICAO airport codes to calculate the great circle path.")
-    print("Example codes: KJFK (New York JFK), EGLL (London Heathrow), OMDB (Dubai)")
-    print()
+def test_distance_accuracy():
+    """Test distance accuracy against known airport pairs."""
+    test_pairs = [
+        ("KJFK", "KLAX", "JFK to LAX"),       # ~3944 km
+        ("KJFK", "EGLL", "JFK to Heathrow"),  # ~5541 km  
+        ("EGLL", "RJTT", "London to Tokyo"),  # ~9584 km
+        ("KLAX", "YSSY", "LAX to Sydney"),    # ~12051 km (crosses antimeridian)
+        ("KJFK", "YSSY", "JFK to Sydney"),    # ~15993 km
+    ]
     
-    try:
-        # Get user input
-        icao1 = input("Enter first airport ICAO code: ").strip().upper()
-        icao2 = input("Enter second airport ICAO code: ").strip().upper()
-        
-        if len(icao1) != 4 or len(icao2) != 4:
-            print("Error: ICAO codes must be exactly 4 characters long")
-            return
-        
-        print(f"\nCalculating path from {icao1} to {icao2}...")
-        
-        # Calculate path
-        result = get_path_for_react(icao1, icao2)
-        
-        if result['success']:
-            data = result['data']
-            print(f"\nPath calculated successfully:---")
-            print(f"From: {data['departure']['name']} ({data['departure']['icao']})")
-            print(f"To: {data['arrival']['name']} ({data['arrival']['icao']})")
-            print(f"Distance: {data['path']['total_distance_km']} km ({data['path']['total_distance_nm']} nm)")
-            print(f"Path points: {len(data['path']['coordinates'])}")
+    print("🧪 Testing Distance Accuracy")
+    print("=" * 50)
+    
+    for icao1, icao2, description in test_pairs:
+        try:
+            # Import original function for comparison
+            from get_path import calculate_great_circle_path
             
-            # Show first few and last few coordinates
-            coords = data['path']['coordinates']
-            print(f"\nFirst 3 coordinates: {coords[:3]}")
-            print(f"Last 3 coordinates: {coords[-3:]}")
+            # Original calculation
+            old_result = calculate_great_circle_path(icao1, icao2)
+            # Improved calculation  
+            new_result = calculate_great_circle_path_improved(icao1, icao2)
             
-        else:
-            print(f"\n❌ Error: {result['error']}")
+            old_km = old_result['total_distance_km']
+            new_km = new_result['total_distance_km']
+            haversine_km = new_result['haversine_distance_km']
             
-    except KeyboardInterrupt:
-        print("\n\nTest cancelled by user")
-    except Exception as e:
-        print(f"\n❌ Unexpected error: {e}")
+            print(f"\n{description}:")
+            print(f"  Original: {old_km:.2f} km")
+            print(f"  Improved: {new_km:.2f} km") 
+            print(f"  Haversine: {haversine_km:.2f} km")
+            print(f"  Difference: {abs(old_km - new_km):.2f} km")
+            print(f"  Antimeridian: {new_result['antimeridian_crossing']}")
+            
+        except Exception as e:
+            print(f"  ❌ Error testing {description}: {e}")
 
 
 if __name__ == "__main__":
-    # Run the test function when script is executed directly
-    test_manual_input()
+    test_distance_accuracy()
