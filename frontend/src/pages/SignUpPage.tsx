@@ -2,16 +2,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import GoogleLogo from ".././assets/logo-google.png";
+import Back from ".././assets/BackGround.png";
 
 export default function SignupPage() {
     return (
         <div className="flex min-h-screen">
             {/* Left Image */}
-            <div
-                className="hidden md:flex w-1/2 bg-cover bg-center"
-                style={{ backgroundImage: "url('/login-left-image.jpg')" }}
-            >
-                <div className="bg-black/40 w-full h-full"></div>
+
+            <div className="hidden md:flex w-1/2 bg-cover bg-center">
+                <img
+                    className="w-full h-full rotate-[-180] object-cover"
+                    src={Back}
+                    alt="Just a image here"
+                ></img>
             </div>
 
             {/* Right Sign Up Form */}

@@ -2,16 +2,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import GoogleLogo from ".././assets/logo-google.png";
+import Back from ".././assets/BackGround.png";
 
 export default function LoginPage() {
     return (
         <div className="flex min-h-screen">
             {/* Left Image */}
-            <div
-                className="hidden md:flex w-1/2 bg-cover bg-center"
-                style={{ backgroundImage: "url('/login-left-image.jpg')" }}
-            >
-                <div className="bg-black/40 w-full h-full"></div>
+            <div className="hidden md:flex w-1/2 bg-cover bg-center">
+                <img
+                    className="w-full h-full rotate-180 object-cover"
+                    src={Back}
+                    alt="Just a image here"
+                ></img>
             </div>
 
             {/* Right Login Form */}
@@ -33,6 +35,18 @@ export default function LoginPage() {
                                 id="email"
                                 type="email"
                                 placeholder="name@example.com"
+                                className="bg-gray-800 text-white border-gray-700"
+                            />
+                        </div>
+
+                        <div>
+                            <Label htmlFor="password" className="text-gray-300">
+                                Password
+                            </Label>
+                            <Input
+                                id="password"
+                                type="password"
+                                placeholder="********"
                                 className="bg-gray-800 text-white border-gray-700"
                             />
                         </div>
@@ -68,15 +82,10 @@ export default function LoginPage() {
                     </Button>
 
                     <p className="text-gray-500 text-xs mt-6 text-center">
-                        By clicking continue, you agree to our{" "}
-                        <a href="/terms" className="underline text-gray-400">
-                            Terms of Service
-                        </a>{" "}
-                        and{" "}
-                        <a href="/privacy" className="underline text-gray-400">
-                            Privacy Policy
+                        Dont have a account?{" "}
+                        <a href="/signup" className="underline text-gray-400">
+                            Sign Up Now!
                         </a>
-                        .
                     </p>
                 </div>
             </div>
