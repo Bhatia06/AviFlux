@@ -7,7 +7,7 @@ token management, and user session handling.
 
 import logging
 from typing import Optional
-from fastapi import APIRouter, HTTPException, status, Depends, Query, Request, Response
+from fastapi import APIRouter, HTTPException, status, Depends, Query, Request
 from fastapi.responses import RedirectResponse, JSONResponse
 from pydantic import HttpUrl
 
@@ -86,24 +86,8 @@ async def oauth_callback(
         # Handle OAuth callback using auth service
         login_response = auth_service.handle_oauth_callback(access_token, refresh_token)
         
-        # Set secure HTTP-only cookies for tokens (optional, for web apps)
-        if Response:
-            Response.set_cookie(
-                key="access_token",
-                value=login_response.tokens.access_token,
-                httponly=True,
-                secure=True,
-                samesite="lax",
-                max_age=login_response.tokens.expires_in
-            )
-            Response.set_cookie(
-                key="refresh_token",
-                value=login_response.tokens.refresh_token,
-                httponly=True,
-                secure=True,
-                samesite="lax",
-                max_age=7 * 24 * 60 * 60  # 7 days
-            )
+        # Note: Cookies can be set by the frontend using the tokens in the response
+        # For server-side cookie setting, you would need to return a Response object
         
         logger.info(f"OAuth callback processed successfully for user: {login_response.user.email}")
         return login_response
@@ -179,10 +163,8 @@ async def logout(
         # In a real implementation, you'd get the token from the request headers
         logout_response = auth_service.logout("")  # Simplified for now
         
-        # Clear authentication cookies
-        if Response:
-            Response.delete_cookie(key="access_token")
-            Response.delete_cookie(key="refresh_token")
+        # Note: Cookies should be cleared by the frontend
+        # For server-side cookie clearing, you would need to return a Response object
         
         logger.info(f"Logout successful for user: {current_user.email}")
         return logout_response

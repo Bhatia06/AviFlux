@@ -289,6 +289,29 @@ def health_check():
     return {"status": "healthy", "airports_loaded": len(airport_db._icao_coords_map)}
 
 
+@app.get("/api/debug/token", tags=["debug"])
+def debug_token_validation(token: str):
+    """Debug endpoint for token validation testing."""
+    try:
+        from services.auth_service import auth_service
+        validation_response = auth_service.validate_token(token)
+        return {
+            "token_received": bool(token),
+            "token_length": len(token) if token else 0,
+            "validation_result": {
+                "valid": validation_response.valid,
+                "error": validation_response.error,
+                "user_email": validation_response.user.email if validation_response.user else None
+            }
+        }
+    except Exception as e:
+        return {
+            "error": f"Token validation failed: {str(e)}",
+            "token_received": bool(token),
+            "token_length": len(token) if token else 0
+        }
+
+
 @app.get("/api/flightpath/summary/{origin_icao}/{destination_icao}", 
          response_model=PathSummaryResponse,
          tags=["flight-path"])
