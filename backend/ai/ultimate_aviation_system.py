@@ -118,12 +118,52 @@ class UltimateAviationWeatherSystem:
             self.historical_data = pd.DataFrame()
             self.weather_patterns = {}
     
-    def load_airport_database(self):
-        """Load airport database"""
+    def load_airport_database(self, supabase_client=None):
+        """Load airport database from Supabase"""
         try:
-            print("🛫 Loading airport database...")
-            self.airports = pd.read_csv('airports.csv')
-            print(f"   ✓ {len(self.airports):,} airports loaded")
+            print("🛫 Loading airport database from Supabase...")
+            
+            if supabase_client is None:
+                # Import here to avoid circular imports
+                import os
+                from supabase import create_client
+                
+                supabase_url = os.getenv("SUPABASE_URL")
+                supabase_anon_key = os.getenv("SUPABASE_ANON_KEY")
+                
+                if not supabase_url or not supabase_anon_key:
+                    print("⚠ Supabase credentials not found, using fallback data")
+                    self.airports = pd.DataFrame()
+                    return
+                
+                supabase_client = create_client(supabase_url, supabase_anon_key)
+            
+            # Load all airports data from Supabase with pagination
+            all_data = []
+            offset = 0
+            page_size = 1000
+            
+            while True:
+                response = supabase_client.table('airports').select('*').range(offset, offset + page_size - 1).execute()
+                
+                if not response.data:
+                    break
+                
+                all_data.extend(response.data)
+                print(f"   Loaded {len(response.data)} records (total so far: {len(all_data)})")
+                
+                if len(response.data) < page_size:
+                    break
+                
+                offset += page_size
+            
+            if all_data:
+                self.airports = pd.DataFrame(all_data)
+                print(f"   ✓ {len(self.airports):,} airports loaded from Supabase")
+            else:
+                print("⚠ No airports data found in Supabase")
+                self.airports = pd.DataFrame()
+            
         except Exception as e:
             print(f"⚠ Airport database error: {e}")
             self.airports = pd.DataFrame()
@@ -450,12 +490,23 @@ class UltimateAviationWeatherSystem:
             return {}
     
     def _get_airport_info(self, airport_code):
-        """Get airport coordinates from database"""
+        """Get airport coordinates from Supabase database"""
         try:
             if not self.airports.empty:
-                airport_row = self.airports[self.airports['ident'] == airport_code]
+                # Use icao_code column name as per Supabase schema
+                airport_row = self.airports[self.airports['icao_code'] == airport_code]
                 if not airport_row.empty:
-                    return airport_row.iloc[0].to_dict()
+                    airport_data = airport_row.iloc[0]
+                    # Convert to expected format with latitude_deg and longitude_deg
+                    return {
+                        'latitude_deg': airport_data.get('latitude', 0.0),
+                        'longitude_deg': airport_data.get('longitude', 0.0),
+                        'elevation_ft': airport_data.get('elevation_ft', 0),
+                        'name': airport_data.get('name', ''),
+                        'municipality': airport_data.get('municipality', ''),
+                        'country': airport_data.get('country', ''),
+                        'icao_code': airport_code
+                    }
             
             # Fallback coordinates for major airports (US and international)
             fallback_coords = {
@@ -479,7 +530,8 @@ class UltimateAviationWeatherSystem:
                 'RJTT': {'latitude_deg': 35.7647, 'longitude_deg': 140.3864, 'elevation_ft': 35},  # Tokyo Haneda
             }
             return fallback_coords.get(airport_code, {'latitude_deg': 40.0, 'longitude_deg': -100.0})
-        except:
+        except Exception as e:
+            print(f"Error getting airport info for {airport_code}: {e}")
             return {'latitude_deg': 40.0, 'longitude_deg': -100.0}
     
     def _get_fallback_weather_data(self, airport_code):
@@ -2675,7 +2727,7 @@ class SeasonalClimateAnalyzer:
         self.weather_system = weather_system
         
     def analyze_seasonal_patterns(self, departure: str, arrival: str, 
-                                 month: int = None) -> Dict[str, Any]:
+                                 month: Optional[int] = None) -> Dict[str, Any]:
         """Analyze seasonal weather patterns for route"""
         if month is None:
             month = datetime.now().month
@@ -2699,7 +2751,7 @@ class SeasonalClimateAnalyzer:
         }
     
     def get_optimal_flight_times(self, departure: str, arrival: str, 
-                                month: int = None) -> Dict[str, Any]:
+                                month: Optional[int] = None) -> Dict[str, Any]:
         """Get optimal departure times based on historical patterns"""
         if month is None:
             month = datetime.now().month

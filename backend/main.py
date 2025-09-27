@@ -19,11 +19,14 @@ from pyproj import Geod
 from models import FlightPlanRequest, FlightPlanResponse, FlightPlan
 from models.dtos import (
     MultiLegRouteRequest, MultiLegRouteSummaryResponse, RouteSegmentSummary,
-    CreateFlightPlanRequest, FlightPlanSearchRequest, MultiICAOFlightPlanRequest
+    CreateFlightPlanRequest, FlightPlanSearchRequest, MultiICAOFlightPlanRequest,
+    WeatherBriefingRequest, WeatherBriefingResponse
 )
 from models.auth_models import AuthError, AuthenticationError
 from services import FlightPlanService, RouteService
 from services.flight_plans_service import FlightPlansService, FlightPlanResponse as DBFlightPlanResponse
+from services.weather_service import get_weather_service
+from services.weather_briefings_service import WeatherBriefingsService
 from routes.auth_routes import router as auth_router
 from get_path import get_path_for_react
 
@@ -223,6 +226,12 @@ route_service = RouteService(airport_db)
 
 # Initialize flight plans database service
 flight_plans_db_service = FlightPlansService(airport_db._supabase_client)
+
+# Initialize weather service
+weather_service = get_weather_service(airport_db._supabase_client)
+
+# Initialize weather briefings database service
+weather_briefings_service = WeatherBriefingsService(airport_db._supabase_client)
 
 
 def calculate_flight_path(origin_icao: str, destination_icao: str) -> Dict:
@@ -815,7 +824,32 @@ def get_multi_leg_route(request: MultiLegRouteRequest):
         
         if data:
             logger.info(f"Multi-leg route calculated successfully for {len(request.icao_codes)} airports")
-            return MultiLegRouteSummaryResponse(**data)
+            
+            # Map service response to Pydantic model format
+            response_data = {
+                "icao_codes": request.icao_codes,
+                "request_date": request.request_date,
+                "circular": request.circular,
+                "total_distance_km": data.get('distance_km', 0.0),
+                "total_distance_nm": data.get('distance_nm', 0.0),
+                "total_points": data.get('total_points', 0),
+                "first_3_coords": data.get('coordinates', [])[:3] if data.get('coordinates') else [],
+                "last_3_coords": data.get('coordinates', [])[-3:] if data.get('coordinates') else [],
+                "segments": []  # Will be populated if segments exist in data
+            }
+            
+            # Add segments if they exist
+            if 'segments' in data:
+                for segment in data['segments']:
+                    response_data["segments"].append({
+                        "origin": segment.get('origin', ''),
+                        "destination": segment.get('destination', ''),
+                        "distance_km": segment.get('distance_km', 0.0),
+                        "distance_nm": segment.get('distance_nm', 0.0),
+                        "points": segment.get('points', 0)
+                    })
+            
+            return MultiLegRouteSummaryResponse(**response_data)
         else:
             logger.error("Multi-leg route calculation returned no data")
             raise HTTPException(status_code=500, detail="Route calculation failed")
@@ -1086,6 +1120,183 @@ async def generate_and_save_flight_plan(
     except Exception as e:
         logger.error(f"Error generating and saving flight plan: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# Weather System Endpoints
+@app.post("/api/weather/briefing", 
+          response_model=WeatherBriefingResponse,
+          tags=["weather"])
+async def get_weather_briefing(request: WeatherBriefingRequest):
+    """
+    Generate comprehensive weather briefing for flight route
+    
+    Supports both single routes (2 airports) and multi-airport routes (3+ airports).
+    Includes METAR, TAF, PIREPs, SIGMETs, ML predictions, and risk assessment.
+    
+    Args:
+        request: Weather briefing request with route details and options
+        
+    Returns:
+        Complete weather briefing with executive summary, detailed data, and risk assessment
+        
+    Examples:
+        Single Route:
+        {
+            "route_type": "single",
+            "airports": ["KJFK", "KLAX"],
+            "detail_level": "summary"
+        }
+        
+        Multi-Airport Route:
+        {
+            "route_type": "multi_airport", 
+            "airports": ["KJFK", "KORD", "KDEN", "KLAX"],
+            "detail_level": "detailed",
+            "include_ml_predictions": true
+        }
+    """
+    try:
+        logger.info(f"Processing weather briefing request: {' -> '.join(request.airports)}")
+        
+        # Validate airports count based on route type
+        if request.route_type == "single" and len(request.airports) != 2:
+            raise HTTPException(
+                status_code=400, 
+                detail="Single route type requires exactly 2 airports"
+            )
+        
+        if len(request.airports) < 2:
+            raise HTTPException(
+                status_code=400,
+                detail="At least 2 airports required"
+            )
+        
+        if len(request.airports) > 10:
+            raise HTTPException(
+                status_code=400,
+                detail="Maximum 10 airports allowed"
+            )
+        
+        # Validate ICAO codes
+        for airport in request.airports:
+            if not airport or len(airport) != 4:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid ICAO code: {airport} (must be 4 characters)"
+                )
+        
+        # Generate weather briefing
+        briefing = await weather_service.generate_weather_briefing(request)
+        
+        if briefing.success:
+            logger.info(f"Weather briefing generated successfully: {briefing.briefing_id}")
+            
+            # Store the briefing in database for later retrieval
+            try:
+                stored = await weather_briefings_service.store_weather_briefing(briefing)
+                if stored:
+                    logger.info(f"Weather briefing stored in database: {briefing.briefing_id}")
+                else:
+                    logger.warning(f"Failed to store weather briefing: {briefing.briefing_id}")
+            except Exception as store_error:
+                logger.error(f"Error storing weather briefing: {store_error}")
+        else:
+            logger.warning(f"Weather briefing generation had issues: {briefing.message}")
+            
+        return briefing
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error generating weather briefing: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error generating weather briefing")
+
+
+@app.post("/api/weather/briefing/simple",
+          tags=["weather"])
+async def get_simple_weather_briefing(
+    departure: str,
+    arrival: str,
+    detail_level: str = "summary"
+):
+    """
+    Simple weather briefing for two airports
+    
+    Args:
+        departure: Departure airport ICAO code
+        arrival: Arrival airport ICAO code  
+        detail_level: 'summary' or 'detailed'
+        
+    Returns:
+        Weather briefing response
+    """
+    request = WeatherBriefingRequest(
+        route_type="single",
+        airports=[departure, arrival],
+        detail_level=detail_level,
+        include_ml_predictions=True,
+        include_alternative_routes=False,
+        enable_flight_monitoring=False,
+        flight_id=None
+    )
+    
+    return await get_weather_briefing(request)
+
+
+@app.get("/api/weather/briefing/{briefing_id}",
+         tags=["weather"])
+async def get_weather_briefing_by_id(briefing_id: str):
+    """
+    Retrieve a previously generated weather briefing by ID
+    
+    Args:
+        briefing_id: Weather briefing identifier
+        
+    Returns:
+        Weather briefing data if found
+    """
+    try:
+        briefing_data = await weather_briefings_service.get_weather_briefing(briefing_id)
+        
+        if briefing_data:
+            logger.info(f"Weather briefing retrieved: {briefing_id}")
+            return {
+                "success": True,
+                "message": "Weather briefing retrieved successfully",
+                "data": briefing_data
+            }
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Weather briefing not found: {briefing_id}"
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving weather briefing {briefing_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.get("/api/weather/briefings/cleanup",
+         tags=["weather"])
+async def cleanup_expired_briefings():
+    """
+    Clean up expired weather briefings from database
+    
+    Returns:
+        Number of briefings cleaned up
+    """
+    try:
+        count = await weather_briefings_service.cleanup_expired_briefings()
+        return {
+            "success": True,
+            "message": f"Cleaned up {count} expired weather briefings",
+            "count": count
+        }
+    except Exception as e:
+        logger.error(f"Error during cleanup: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error during cleanup")
 
 
 if __name__ == "__main__":

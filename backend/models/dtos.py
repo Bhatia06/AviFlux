@@ -171,3 +171,117 @@ class MultiLegRouteSummaryResponse(BaseModel):
     last_3_coords: List[Tuple[float, float]]
     segments: List[RouteSegmentSummary]
 
+
+# Weather System DTOs
+class WeatherBriefingRequest(BaseModel):
+    """Request for weather briefing"""
+    route_type: str = Field(..., description="'single' for two airports, 'multi_airport' for multiple")
+    airports: List[str] = Field(..., description="List of ICAO airport codes (2-10 airports)")
+    detail_level: str = Field(default="summary", description="'summary' or 'detailed'")
+    include_ml_predictions: bool = Field(default=True, description="Include ML-based predictions")
+    include_alternative_routes: bool = Field(default=False, description="Include alternative routes")
+    enable_flight_monitoring: bool = Field(default=False, description="Enable real-time monitoring")
+    flight_id: Optional[str] = Field(None, description="Optional flight identifier for monitoring")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "route_type": "single",
+                "airports": ["KJFK", "KLAX"],
+                "detail_level": "summary",
+                "include_ml_predictions": True,
+                "include_alternative_routes": False,
+                "enable_flight_monitoring": False,
+                "flight_id": "FL001"
+            }
+        }
+
+
+class WeatherData(BaseModel):
+    """Weather data for a single airport"""
+    airport_code: str
+    current_conditions: Dict
+    forecast: Optional[Dict]
+    metar: Optional[str]
+    taf: Optional[str]
+    pireps: Optional[List[Dict]]
+    sigmets: Optional[List[Dict]]
+
+
+class MLPredictions(BaseModel):
+    """Machine learning predictions"""
+    temperature: Optional[float]
+    wind_speed: Optional[float]
+    wind_direction: Optional[float]
+    pressure: Optional[float]
+    turbulence_level: Optional[str]
+    icing_probability: Optional[float]
+    weather_category: Optional[str]
+    confidence_score: Optional[str]
+
+
+class RiskAssessment(BaseModel):
+    """Risk assessment data"""
+    overall_risk_score: float = Field(..., ge=0, le=100, description="Risk score from 0-100")
+    risk_category: str = Field(..., description="LOW, MODERATE, HIGH, SEVERE")
+    flight_recommendation: str
+    risk_factors: List[str]
+    weather_hazards: List[str]
+
+
+class AlternativeRoute(BaseModel):
+    """Alternative route suggestion"""
+    route_airports: List[str]
+    reason: str
+    estimated_additional_time: Optional[int]  # minutes
+    risk_reduction: Optional[float]
+
+
+class WeatherBriefingResponse(BaseModel):
+    """Complete weather briefing response"""
+    success: bool
+    message: str
+    briefing_id: str
+    generated_at: datetime
+    route_type: str
+    airports: List[str]
+    detail_level: str
+    
+    # Core briefing content
+    executive_summary: str
+    weather_data: List[WeatherData]
+    ml_predictions: Optional[Dict[str, MLPredictions]]
+    risk_assessment: RiskAssessment
+    
+    # Optional features
+    alternative_routes: Optional[List[AlternativeRoute]]
+    flight_monitoring_enabled: bool
+    monitoring_id: Optional[str]
+    
+    # Additional metadata
+    data_sources: List[str]
+    last_updated: datetime
+    valid_until: datetime
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "message": "Weather briefing generated successfully",
+                "briefing_id": "WB-20250927-001",
+                "generated_at": "2025-09-27T10:00:00Z",
+                "route_type": "single",
+                "airports": ["KJFK", "KLAX"],
+                "detail_level": "summary",
+                "executive_summary": "Weather conditions are favorable for VFR flight...",
+                "risk_assessment": {
+                    "overall_risk_score": 25.5,
+                    "risk_category": "LOW",
+                    "flight_recommendation": "PROCEED",
+                    "risk_factors": ["Light turbulence expected"],
+                    "weather_hazards": []
+                },
+                "flight_monitoring_enabled": False
+            }
+        }
+
