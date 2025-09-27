@@ -1,0 +1,650 @@
+{
+  "airport_code": "VAPO",
+  "query_timestamp": "2025-09-27T06:12:44.057672",
+  "data_sources": [
+    "TAF",
+    "PIREP",
+    "SIGMET",
+    "AIRMET"
+  ],
+  "forecast": {
+    "source": "TAF",
+    "issue_time": "2025-09-26T23:00:00.000Z",
+    "bulletin_time": "2025-09-26T23:00:00.000Z",
+    "valid_time_from": 1758931200,
+    "valid_time_to": 1759039200,
+    "raw_taf": "TAF VAPO 262300Z 2700/2806 29010KT 5000 RA SCT015 SCT020 BKN080 TEMPO 2701/2704 3000 RABR TEMPO 2708/2712 06015G25KT 2000 TSRA SCT010 SCT012 FEW030CB OVC070 TEMPO 2718/2722 3000 RA SCT015 SCT020 FEW030TCU BKN080 TEMPO 2801/2804 3000 RABR",
+    "forecast_periods": [
+      {
+        "timeFrom": 1758931200,
+        "timeTo": 1759039200,
+        "timeBec": null,
+        "fcstChange": null,
+        "probability": null,
+        "wdir": 290,
+        "wspd": 10,
+        "wgst": null,
+        "wshearHgt": null,
+        "wshearDir": null,
+        "wshearSpd": null,
+        "visib": 3.11,
+        "altim": null,
+        "vertVis": null,
+        "wxString": "RA",
+        "notDecoded": null,
+        "clouds": [
+          {
+            "cover": "SCT",
+            "base": 1500,
+            "type": null
+          },
+          {
+            "cover": "SCT",
+            "base": 2000,
+            "type": null
+          },
+          {
+            "cover": "BKN",
+            "base": 8000,
+            "type": null
+          }
+        ],
+        "icgTurb": [],
+        "temp": []
+      },
+      {
+        "timeFrom": 1758934800,
+        "timeTo": 1758945600,
+        "timeBec": null,
+        "fcstChange": "TEMPO",
+        "probability": null,
+        "wdir": null,
+        "wspd": null,
+        "wgst": null,
+        "wshearHgt": null,
+        "wshearDir": null,
+        "wshearSpd": null,
+        "visib": 1.86,
+        "altim": null,
+        "vertVis": null,
+        "wxString": "RA BR",
+        "notDecoded": null,
+        "clouds": [],
+        "icgTurb": [],
+        "temp": []
+      },
+      {
+        "timeFrom": 1758960000,
+        "timeTo": 1758974400,
+        "timeBec": null,
+        "fcstChange": "TEMPO",
+        "probability": null,
+        "wdir": 60,
+        "wspd": 15,
+        "wgst": 25,
+        "wshearHgt": null,
+        "wshearDir": null,
+        "wshearSpd": null,
+        "visib": 1.24,
+        "altim": null,
+        "vertVis": null,
+        "wxString": "TSRA",
+        "notDecoded": null,
+        "clouds": [
+          {
+            "cover": "SCT",
+            "base": 1000,
+            "type": null
+          },
+          {
+            "cover": "SCT",
+            "base": 1200,
+            "type": null
+          },
+          {
+            "cover": "FEW",
+            "base": 3000,
+            "type": "CB"
+          }
+        ],
+        "icgTurb": [],
+        "temp": []
+      },
+      {
+        "timeFrom": 1758996000,
+        "timeTo": 1759010400,
+        "timeBec": null,
+        "fcstChange": "TEMPO",
+        "probability": null,
+        "wdir": null,
+        "wspd": null,
+        "wgst": null,
+        "wshearHgt": null,
+        "wshearDir": null,
+        "wshearSpd": null,
+        "visib": 1.86,
+        "altim": null,
+        "vertVis": null,
+        "wxString": "RA",
+        "notDecoded": "OVC070 ",
+        "clouds": [
+          {
+            "cover": "SCT",
+            "base": 1500,
+            "type": null
+          },
+          {
+            "cover": "SCT",
+            "base": 2000,
+            "type": null
+          },
+          {
+            "cover": "FEW",
+            "base": 3000,
+            "type": "TCU"
+          }
+        ],
+        "icgTurb": [],
+        "temp": []
+      },
+      {
+        "timeFrom": 1759021200,
+        "timeTo": 1759032000,
+        "timeBec": null,
+        "fcstChange": "TEMPO",
+        "probability": null,
+        "wdir": null,
+        "wspd": null,
+        "wgst": null,
+        "wshearHgt": null,
+        "wshearDir": null,
+        "wshearSpd": null,
+        "visib": 1.86,
+        "altim": null,
+        "vertVis": null,
+        "wxString": "RA BR",
+        "notDecoded": "BKN080 ",
+        "clouds": [],
+        "icgTurb": [],
+        "temp": []
+      }
+    ]
+  },
+  "pilot_reports": {
+    "source": "PIREP",
+    "report_count": 1,
+    "reports": [
+      {
+        "observation_time": 1758929640,
+        "aircraft_type": "UAL1706",
+        "flight_level": null,
+        "turbulence": null,
+        "icing": null,
+        "visibility": null,
+        "temperature": null,
+        "wind": null,
+        "location": null,
+        "raw_pirep": "ARP UAL1706 3948N 09815W 2334 F350 251/027 TB OCNL LGT CHOP IC"
+      }
+    ]
+  },
+  "significant_weather": {
+    "source": "SIGMET",
+    "warning_count": 11,
+    "warnings": [
+      {
+        "hazard": "CONVECTIVE",
+        "severity": 5,
+        "type": null,
+        "valid_time_from": 1758930900,
+        "valid_time_to": 1758938100,
+        "altitude_range": {
+          "top": 45000,
+          "bottom": null
+        },
+        "raw_sigmet": null
+      },
+      {
+        "hazard": "CONVECTIVE",
+        "severity": 5,
+        "type": null,
+        "valid_time_from": 1758930900,
+        "valid_time_to": 1758938100,
+        "altitude_range": {
+          "top": 43000,
+          "bottom": null
+        },
+        "raw_sigmet": null
+      },
+      {
+        "hazard": "CONVECTIVE",
+        "severity": 5,
+        "type": null,
+        "valid_time_from": 1758930900,
+        "valid_time_to": 1758938100,
+        "altitude_range": {
+          "top": 45000,
+          "bottom": null
+        },
+        "raw_sigmet": null
+      },
+      {
+        "hazard": "CONVECTIVE",
+        "severity": 5,
+        "type": null,
+        "valid_time_from": 1758930900,
+        "valid_time_to": 1758938100,
+        "altitude_range": {
+          "top": 45000,
+          "bottom": null
+        },
+        "raw_sigmet": null
+      },
+      {
+        "hazard": "CONVECTIVE",
+        "severity": 5,
+        "type": null,
+        "valid_time_from": 1758930900,
+        "valid_time_to": 1758938100,
+        "altitude_range": {
+          "top": 35000,
+          "bottom": null
+        },
+        "raw_sigmet": null
+      },
+      {
+        "hazard": "CONVECTIVE",
+        "severity": 5,
+        "type": null,
+        "valid_time_from": 1758930900,
+        "valid_time_to": 1758938100,
+        "altitude_range": {
+          "top": 36000,
+          "bottom": null
+        },
+        "raw_sigmet": null
+      },
+      {
+        "hazard": "CONVECTIVE",
+        "severity": 5,
+        "type": null,
+        "valid_time_from": 1758930900,
+        "valid_time_to": 1758938100,
+        "altitude_range": {
+          "top": 45000,
+          "bottom": null
+        },
+        "raw_sigmet": null
+      },
+      {
+        "hazard": "CONVECTIVE",
+        "severity": 5,
+        "type": null,
+        "valid_time_from": 1758930900,
+        "valid_time_to": 1758938100,
+        "altitude_range": {
+          "top": 43000,
+          "bottom": null
+        },
+        "raw_sigmet": null
+      },
+      {
+        "hazard": "CONVECTIVE",
+        "severity": 5,
+        "type": null,
+        "valid_time_from": 1758930900,
+        "valid_time_to": 1758938100,
+        "altitude_range": {
+          "top": 45000,
+          "bottom": null
+        },
+        "raw_sigmet": null
+      },
+      {
+        "hazard": "CONVECTIVE",
+        "severity": 5,
+        "type": null,
+        "valid_time_from": 1758930900,
+        "valid_time_to": 1758938100,
+        "altitude_range": {
+          "top": 35000,
+          "bottom": null
+        },
+        "raw_sigmet": null
+      },
+      {
+        "hazard": "CONVECTIVE",
+        "severity": 5,
+        "type": null,
+        "valid_time_from": 1758930900,
+        "valid_time_to": 1758938100,
+        "altitude_range": {
+          "top": 39000,
+          "bottom": null
+        },
+        "raw_sigmet": null
+      }
+    ]
+  },
+  "airmen_meteorological_info": {
+    "source": "AIRMET",
+    "advisory_count": 45,
+    "advisories": [
+      {
+        "hazard": "IFR",
+        "severity": null,
+        "valid_time_from": 1758917640,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "MT-OBSC",
+        "severity": null,
+        "valid_time_from": 1758917640,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "MT-OBSC",
+        "severity": null,
+        "valid_time_from": 1758917640,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "IFR",
+        "severity": null,
+        "valid_time_from": 1758917640,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "MT-OBSC",
+        "severity": null,
+        "valid_time_from": 1758917640,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "IFR",
+        "severity": null,
+        "valid_time_from": 1758917640,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "MT-OBSC",
+        "severity": null,
+        "valid_time_from": 1758917640,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "SFC-WIND",
+        "severity": null,
+        "valid_time_from": 1758917760,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "SFC-WIND",
+        "severity": null,
+        "valid_time_from": 1758917760,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "TURB",
+        "severity": null,
+        "valid_time_from": 1758917760,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "MT-OBSC",
+        "severity": null,
+        "valid_time_from": 1758917760,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "SFC-WIND",
+        "severity": null,
+        "valid_time_from": 1758917820,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "ICE",
+        "severity": null,
+        "valid_time_from": 1758917820,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "MT-OBSC",
+        "severity": null,
+        "valid_time_from": 1758917820,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "TURB",
+        "severity": null,
+        "valid_time_from": 1758917820,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "LLWS",
+        "severity": null,
+        "valid_time_from": 1758917820,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "ICE",
+        "severity": null,
+        "valid_time_from": 1758917820,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "MT-OBSC",
+        "severity": null,
+        "valid_time_from": 1758917820,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "LLWS",
+        "severity": null,
+        "valid_time_from": 1758917820,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "TURB",
+        "severity": null,
+        "valid_time_from": 1758917820,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "MT-OBSC",
+        "severity": null,
+        "valid_time_from": 1758917820,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "TURB",
+        "severity": null,
+        "valid_time_from": 1758917820,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "LLWS",
+        "severity": null,
+        "valid_time_from": 1758917820,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "MT-OBSC",
+        "severity": null,
+        "valid_time_from": 1758917820,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "TURB",
+        "severity": null,
+        "valid_time_from": 1758917820,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "LLWS",
+        "severity": null,
+        "valid_time_from": 1758917820,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "SFC-WIND",
+        "severity": null,
+        "valid_time_from": 1758918540,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "MT-OBSC",
+        "severity": null,
+        "valid_time_from": 1758918540,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "TURB",
+        "severity": null,
+        "valid_time_from": 1758918540,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "ICE",
+        "severity": null,
+        "valid_time_from": 1758918540,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "SFC-WIND",
+        "severity": null,
+        "valid_time_from": 1758918540,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "IFR",
+        "severity": null,
+        "valid_time_from": 1758925560,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "MT-OBSC",
+        "severity": null,
+        "valid_time_from": 1758925560,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "SFC-WIND",
+        "severity": null,
+        "valid_time_from": 1758925560,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "IFR",
+        "severity": null,
+        "valid_time_from": 1758925560,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "MT-OBSC",
+        "severity": null,
+        "valid_time_from": 1758925560,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "MT-OBSC",
+        "severity": null,
+        "valid_time_from": 1758925560,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "TURB",
+        "severity": null,
+        "valid_time_from": 1758925560,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "SFC-WIND",
+        "severity": null,
+        "valid_time_from": 1758925560,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "MT-OBSC",
+        "severity": null,
+        "valid_time_from": 1758925560,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "TURB",
+        "severity": null,
+        "valid_time_from": 1758925560,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "SFC-WIND",
+        "severity": null,
+        "valid_time_from": 1758925560,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "MT-OBSC",
+        "severity": null,
+        "valid_time_from": 1758925560,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "TURB",
+        "severity": null,
+        "valid_time_from": 1758925560,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      },
+      {
+        "hazard": "TURB",
+        "severity": null,
+        "valid_time_from": 1758925560,
+        "valid_time_to": 1758960000,
+        "raw_airmet": null
+      }
+    ]
+  }
+}
